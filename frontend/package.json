@@ -43,7 +43,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
+    "lint": "eslint \"src/**/*.{js,jsx}\" --max-warnings=0",
     "vercel-build": "vite build"
   },
   "overrides": {
