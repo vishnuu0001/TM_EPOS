@@ -1,0 +1,2 @@
+# API Gateway specific requirements (inherits from parent requirements.txt)
+-r ../requirements.txt

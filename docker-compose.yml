@@ -1,0 +1,179 @@
+version: '3.8'
+
+services:
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: epos_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - epos_network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: epos_api_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./backend/data/epos.db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - epos_network
+    volumes:
+      - ./backend:/app/backend
+      - ./backend/data:/app/backend/data
+
+  # Colony Maintenance Service
+  colony-service:
+    build:
+      context: ./backend/services/colony-maintenance
+      dockerfile: Dockerfile
+    container_name: epos_colony_service
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=sqlite:///./backend/data/epos.db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - epos_network
+    volumes:
+      - ./backend/data:/app/backend/data
+
+  # Guest House Service
+  guesthouse-service:
+    build:
+      context: ./backend/services/guest-house
+      dockerfile: Dockerfile
+    container_name: epos_guesthouse_service
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=sqlite:///./backend/data/epos.db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - epos_network
+    volumes:
+      - ./backend/data:/app/backend/data
+
+  # Equipment Service
+  equipment-service:
+    build:
+      context: ./backend/services/equipment
+      dockerfile: Dockerfile
+    container_name: epos_equipment_service
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=sqlite:///./backend/data/epos.db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - epos_network
+    volumes:
+      - ./backend/data:/app/backend/data
+
+  # Vigilance Service
+  vigilance-service:
+    build:
+      context: ./backend/services/vigilance
+      dockerfile: Dockerfile
+    container_name: epos_vigilance_service
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=sqlite:///./backend/data/epos.db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - epos_network
+    volumes:
+      - ./backend/data:/app/backend/data
+
+  # Vehicle Service
+  vehicle-service:
+    build:
+      context: ./backend/services/vehicle
+      dockerfile: Dockerfile
+    container_name: epos_vehicle_service
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=sqlite:///./backend/data/epos.db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - epos_network
+    volumes:
+      - ./backend/data:/app/backend/data
+
+  # Visitor Service
+  visitor-service:
+    build:
+      context: ./backend/services/visitor
+      dockerfile: Dockerfile
+    container_name: epos_visitor_service
+    ports:
+      - "8006:8006"
+    environment:
+      - DATABASE_URL=sqlite:///./backend/data/epos.db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - epos_network
+    volumes:
+      - ./backend/data:/app/backend/data
+
+  # Canteen Service
+  canteen-service:
+    build:
+      context: ./backend/services/canteen
+      dockerfile: Dockerfile
+    container_name: epos_canteen_service
+    ports:
+      - "8007:8007"
+    environment:
+      - DATABASE_URL=sqlite:///./backend/data/epos.db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - epos_network
+    volumes:
+      - ./backend/data:/app/backend/data
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: epos_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - api-gateway
+    networks:
+      - epos_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+networks:
+  epos_network:
+    driver: bridge
+

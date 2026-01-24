@@ -1,0 +1,5 @@
+# This directory contains the SQLite database file
+# The database file (epos.db) will be created automatically when you run init_db.py
+
+# .gitignore is configured to ignore *.db files to avoid committing database files
+# However, this .gitkeep file ensures the directory structure is preserved in git

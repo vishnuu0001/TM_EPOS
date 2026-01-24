@@ -1,0 +1,40 @@
+# Shared dependencies for all backend services
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+pydantic
+pydantic-settings
+python-jose[cryptography]
+bcrypt==4.0.1
+passlib
+python-multipart
+python-dotenv
+aiofiles
+redis
+celery
+httpx
+requests
+pytz
+pendulum
+
+# Email
+email-validator
+aiosmtplib
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+
+# Code quality
+black
+flake8
+mypy
+
+# Monitoring
+prometheus-client
+
+# Documentation
+mkdocs
+mkdocs-material
