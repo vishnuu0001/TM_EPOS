@@ -219,7 +219,10 @@ async def proxy_request(request: Request, service_url: str, path: str):
 @app.api_route("/api/colony/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def colony_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Colony Maintenance Service"""
-    return await proxy_request(request, settings.COLONY_SERVICE_URL, f"/{path}")
+    base = settings.COLONY_SERVICE_URL.rstrip("/")
+    if "/api/colony" not in base:
+        base = f"{base}/api/colony"
+    return await proxy_request(request, base, f"/{path}")
 
 
 # Guest House Service routes
