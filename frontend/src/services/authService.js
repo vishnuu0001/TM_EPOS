@@ -8,12 +8,7 @@ export const authService = {
 
     const response = await axiosInstance.post(
       '/api/auth/login',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
+      formData
     )
     return response.data
   },
