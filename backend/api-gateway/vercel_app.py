@@ -130,6 +130,19 @@ async def health_check_alias():
     """Health check alias for Vercel routing"""
     return {"status": "healthy", "platform": "vercel"}
 
+
+@app.options("/api/{path:path}")
+async def preflight_handler(path: str, request: Request):
+    """Handle CORS preflight requests explicitly."""
+    origin = request.headers.get("origin", "*")
+    response = JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    response.headers["Access-Control-Allow-Origin"] = origin
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Vary"] = "Origin"
+    return response
+
 # Authentication endpoints
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(
