@@ -5,6 +5,7 @@ from mangum import Mangum
 from sqlalchemy.orm import Session
 import sys
 import os
+import json
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,14 +25,24 @@ app = FastAPI(
 )
 
 # CORS Configuration for Vercel
+_raw_cors = os.getenv("CORS_ORIGINS", "").strip()
+_cors_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8000",
+]
+if _raw_cors:
+    try:
+        parsed = json.loads(_raw_cors)
+        if isinstance(parsed, list):
+            _cors_origins.extend(parsed)
+    except json.JSONDecodeError:
+        _cors_origins.extend([origin.strip() for origin in _raw_cors.split(",") if origin.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:8000",
-        "https://*.vercel.app",
-        "https://vercel.app"
-    ],
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
