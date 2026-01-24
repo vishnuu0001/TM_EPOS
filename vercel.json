@@ -35,10 +35,5 @@
       "src": "/(.*)",
       "dest": "/frontend/$1"
     }
-  ],
-  "env": {
-    "SECRET_KEY": "@secret_key",
-    "CORS_ORIGINS": "[\"https://*.vercel.app\"]",
-    "DATABASE_URL": "sqlite:///./tmp/epos.db"
-  }
+  ]
 }
