@@ -49,80 +49,129 @@ python init_db.py
 
 ---
 
-## 🔧 Deployment Steps
+## 🔧 Deployment Steps (Detailed, Working)
 
-### Method 1: Deploy via Vercel CLI (Quick)
+This project deploys best as **two Vercel projects**:
+- **Backend API** (Python serverless function)
+- **Frontend** (React static app)
+
+This avoids route conflicts and makes logs clearer.
+
+---
+
+### ✅ Step 1: Push to GitHub
 
 ```bash
-# Install Vercel CLI
-npm install -g vercel
-
-# Login to Vercel
-vercel login
-
-# Deploy from project root
-cd E:\TechDev2026_POS
-vercel
-
-# Follow the prompts:
-# - Set up and deploy? Yes
-# - Which scope? (Select your account)
-# - Link to existing project? No
-# - Project name: epos-app
-# - Directory: ./
-# - Override settings? No
+git init
+git add .
+git commit -m "Initial commit for Vercel deployment"
+git remote add origin <your-github-repo-url>
+git push -u origin main
 ```
 
-### Method 2: Deploy via Vercel Dashboard (Recommended)
+---
 
-1. **Push to GitHub**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit for Vercel deployment"
-   git remote add origin <your-github-repo-url>
-   git push -u origin main
-   ```
+### ✅ Step 2: Deploy Backend (API) on Vercel
 
-2. **Connect to Vercel**
-   - Go to [vercel.com/dashboard](https://vercel.com/dashboard)
-   - Click "Add New" → "Project"
-   - Import your GitHub repository
-   - Configure project:
-     - Framework Preset: Other
-     - Root Directory: ./
-     - Build Command: `cd frontend && npm install && npm run build`
-     - Output Directory: `frontend/dist`
-     - Install Command: `cd frontend && npm install`
+1. Go to [vercel.com/dashboard](https://vercel.com/dashboard) → **Add New → Project**
+2. Import your repository
+3. **Project Name**: `epos-api`
+4. **Framework Preset**: Other
+5. **Root Directory**: `backend/api-gateway`
 
-3. **Configure Environment Variables**
+#### ✅ Build & Output Settings (Backend)
 
-   In Vercel Dashboard → Settings → Environment Variables, add:
+- **Build Command**: *(leave empty)*
+- **Output Directory**: *(leave empty)*
+- **Install Command**: *(leave empty)*
 
-   **Backend:**
-   ```
-   DATABASE_URL=sqlite:///./tmp/epos.db
-   SECRET_KEY=9xp5cNa3iTm2NgX/mmFcHeK3yXjRVhpDfyiR+SslNPM=
-   ALGORITHM=HS256
-   ACCESS_TOKEN_EXPIRE_MINUTES=525600
-   CORS_ORIGINS=["https://*.vercel.app"]
-   ```
+Vercel automatically installs Python dependencies from:
+`backend/api-gateway/requirements_vercel.txt`
 
-   **Important:** Type the SECRET_KEY value directly (no quotes, no leading `@`, no Vercel secret reference). If the dashboard auto-converts it to `@secret_key`, delete that entry and re-add `SECRET_KEY` as a plain value. CLI alternative: `vercel env add SECRET_KEY` and paste the value for each environment.
+#### ✅ Environment Variables (Backend)
 
-   **Note**: SQLite on Vercel lives in `/tmp` and is ephemeral. For persistence, migrate to Turso or PostgreSQL (e.g., Vercel Postgres/Neon) and update `DATABASE_URL` accordingly.
+Go to **Project → Settings → Environment Variables** and add:
 
-   **Frontend:**
-   ```
-   VITE_API_URL=https://your-app.vercel.app
-   VITE_APP_NAME=ePOS
-   VITE_APP_VERSION=1.0.0
-   ```
+```
+DATABASE_URL=sqlite:////tmp/epos.db
+SECRET_KEY=<your-strong-key>
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=525600
+```
 
-4. **Deploy**
-   - Click "Deploy"
-   - Wait for deployment to complete
-   - Your app will be available at: `https://your-app.vercel.app`
+**Important:**
+- Use the absolute `/tmp` path: `sqlite:////tmp/epos.db`
+- Do not prefix `SECRET_KEY` with `@`
+
+#### ✅ Deploy
+
+Click **Deploy**.
+
+After deployment, copy the API URL:
+
+```
+https://epos-api.vercel.app
+```
+
+Test it:
+
+```
+https://epos-api.vercel.app/api/health
+```
+
+---
+
+### ✅ Step 3: Deploy Frontend on Vercel
+
+1. Go to Vercel → **Add New → Project**
+2. Import the same repository again
+3. **Project Name**: `epos-frontend`
+4. **Framework Preset**: Vite
+5. **Root Directory**: `frontend`
+
+#### ✅ Build & Output Settings (Frontend)
+
+- **Build Command**: `npm run build`
+- **Output Directory**: `dist`
+- **Install Command**: `npm install`
+
+#### ✅ Environment Variables (Frontend)
+
+```
+VITE_API_URL=https://epos-api.vercel.app
+VITE_APP_NAME=ePOS
+VITE_APP_VERSION=1.0.0
+```
+
+#### ✅ Deploy
+
+Click **Deploy**.
+
+Your frontend will be available at:
+
+```
+https://epos-frontend.vercel.app
+```
+
+---
+
+### ✅ Step 4: Allow Frontend Domain in CORS (Backend)
+
+If you see CORS errors, set the frontend origin in backend environment variables:
+
+```
+CORS_ORIGINS=["https://epos-frontend.vercel.app"]
+```
+
+Then **Redeploy** the backend.
+
+---
+
+### ✅ Step 5: Verify End‑to‑End
+
+1. Open the frontend URL
+2. Login using valid credentials
+3. Ensure API calls work without CORS errors
 
 ---
 
