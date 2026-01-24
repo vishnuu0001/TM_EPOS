@@ -1,10 +1,40 @@
-fastapi==0.109.0
-sqlalchemy==2.0.25
-pydantic==2.5.3
-pydantic-settings==2.1.0
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
-mangum==0.17.0
-email-validator==2.1.0.post1
-httpx==0.27.0
+# Shared dependencies for all backend services
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+pydantic
+pydantic-settings
+python-jose[cryptography]
+bcrypt==4.0.1
+passlib
+python-multipart
+python-dotenv
+aiofiles
+redis
+celery
+httpx
+requests
+pytz
+pendulum
+
+# Email
+email-validator
+aiosmtplib
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+
+# Code quality
+black
+flake8
+mypy
+
+# Monitoring
+prometheus-client
+
+# Documentation
+mkdocs
+mkdocs-material
