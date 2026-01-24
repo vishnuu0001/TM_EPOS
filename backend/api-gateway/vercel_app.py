@@ -255,5 +255,41 @@ async def logout():
     """Logout endpoint"""
     return MessageResponse(message="Logged out successfully")
 
+
+# Fallback dashboard stats endpoints (when downstream services are unavailable)
+@app.get("/api/guesthouse/dashboard/stats")
+async def guesthouse_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    return {"total": 0, "available": 0, "occupied": 0, "maintenance": 0}
+
+
+@app.get("/api/visitor/dashboard/stats")
+async def visitor_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    return {"total": 0, "pending": 0, "approved": 0, "rejected": 0}
+
+
+@app.get("/api/equipment/dashboard/stats")
+async def equipment_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    return {"total": 0, "available": 0, "in_use": 0, "maintenance": 0}
+
+
+@app.get("/api/vigilance/dashboard/stats")
+async def vigilance_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    return {"total": 0, "active": 0, "inactive": 0}
+
+
+@app.get("/api/vehicle/dashboard/stats")
+async def vehicle_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    return {"total": 0, "available": 0, "in_use": 0, "maintenance": 0}
+
+
+@app.get("/api/canteen/dashboard/stats")
+async def canteen_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    return {"total": 0, "active": 0, "inactive": 0}
+
+
+@app.get("/api/colony/dashboard/stats")
+async def colony_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    return {"total": 0, "pending": 0, "in_progress": 0, "resolved": 0}
+
 # Vercel serverless handler
 handler = Mangum(app)
