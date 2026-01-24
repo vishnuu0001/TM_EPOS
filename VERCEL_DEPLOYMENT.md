@@ -126,6 +126,39 @@ vercel
 
 ---
 
+## ✅ Frontend (React JSX) Notes
+
+- The frontend now uses **.jsx** files (no TypeScript). Entry point is `frontend/src/main.jsx`.
+- Vite config is in `frontend/vite.config.js` and **resolves .jsx/.js first**.
+- If you previously set Vercel build settings in the dashboard, note that **`builds` in `vercel.json` overrides those settings**. The build output is `frontend/dist` (configured as `dist` under `frontend/package.json`).
+
+---
+
+## ✅ Required Vercel Settings (Dashboard)
+
+**Framework Preset:** Other
+
+**Root Directory:** `./`
+
+**Build Command:**
+```
+cd frontend && npm install && npm run build
+```
+
+**Output Directory:**
+```
+frontend/dist
+```
+
+**Install Command:**
+```
+cd frontend && npm install
+```
+
+> Note: If you keep `builds` in `vercel.json`, the dashboard settings are ignored. You can still keep these values for clarity.
+
+---
+
 ## 🔄 Deployment Architecture
 
 ### Vercel Deployment Structure
