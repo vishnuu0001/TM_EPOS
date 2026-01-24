@@ -21,13 +21,18 @@ export interface LoginResponse {
 
 export const authService = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    const formData = new FormData()
+    const formData = new URLSearchParams()
     formData.append('username', credentials.username)
     formData.append('password', credentials.password)
 
     const response = await axiosInstance.post<LoginResponse>(
       '/api/auth/login',
-      formData
+      formData,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      }
     )
     return response.data
   },
