@@ -1,0 +1,395 @@
+import { useState } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
+  Grid,
+  Card,
+  CardContent,
+  Tab,
+  Tabs,
+} from '@mui/material';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import guesthouseService, { type CreateBooking } from '../../services/guesthouseService';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
+
+export default function GuestHouse() {
+  const [activeTab, setActiveTab] = useState(0);
+  const [openBookingDialog, setOpenBookingDialog] = useState(false);
+  const [bookingForm, setBookingForm] = useState<CreateBooking>({
+    guest_name: '',
+    guest_phone: '',
+    guest_email: '',
+    guest_company: '',
+    room_id: '',
+    check_in_date: '',
+    check_out_date: '',
+    cost_center: '',
+    meal_plan: '',
+    special_requests: '',
+    booked_by_user_id: '',
+  });
+
+  const queryClient = useQueryClient();
+  const user = useSelector((state: RootState) => state.auth.user);
+
+  const { data: stats, error: statsError, isLoading: statsLoading } = useQuery({
+    queryKey: ['guesthouseStats'],
+    queryFn: guesthouseService.getDashboardStats,
+    enabled: !!user,
+    retry: 1,
+  });
+
+  const { data: rooms = [], error: roomsError, isLoading: roomsLoading } = useQuery({
+    queryKey: ['rooms'],
+    queryFn: () => guesthouseService.getRooms(),
+    enabled: !!user,
+    retry: 1,
+  });
+
+  const { data: bookings = [], error: bookingsError, isLoading: bookingsLoading } = useQuery({
+    queryKey: ['bookings'],
+    queryFn: () => guesthouseService.getBookings(),
+    enabled: !!user,
+    retry: 1,
+  });
+
+  const createBookingMutation = useMutation({
+    mutationFn: guesthouseService.createBooking,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['guesthouseStats'] });
+      setOpenBookingDialog(false);
+      resetForm();
+    },
+  });
+
+  const resetForm = () => {
+    setBookingForm({
+      guest_name: '',
+      guest_phone: '',
+      guest_email: '',
+      guest_company: '',
+      room_id: '',
+      check_in_date: '',
+      check_out_date: '',
+      cost_center: '',
+      meal_plan: '',
+      special_requests: '',
+      booked_by_user_id: user?.id || '',
+    });
+  };
+
+  const handleSubmitBooking = () => {
+    createBookingMutation.mutate({
+      ...bookingForm,
+      booked_by_user_id: user?.id || '',
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
+      available: 'success',
+      occupied: 'error',
+      confirmed: 'info',
+      checked_in: 'warning',
+      checked_out: 'success',
+      cancelled: 'error',
+    };
+    return colors[status] || 'default';
+  };
+
+  return (
+    <Box>
+      {(statsError || roomsError || bookingsError) && (
+        <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', color: 'error.contrastText', borderRadius: 1 }}>
+          Error loading data. Please check if the Guest House service is running on port 8002.
+          {statsError && <div>Stats Error: {String(statsError)}</div>}
+          {roomsError && <div>Rooms Error: {String(roomsError)}</div>}
+          {bookingsError && <div>Bookings Error: {String(bookingsError)}</div>}
+        </Box>
+      )}
+      {(statsLoading || roomsLoading || bookingsLoading) && (
+        <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', color: 'info.contrastText', borderRadius: 1 }}>
+          Loading data...
+        </Box>
+      )}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" gutterBottom fontWeight={600}>
+          Guest House Management
+        </Typography>
+        <Button variant="contained" onClick={() => setOpenBookingDialog(true)}>
+          New Booking
+        </Button>
+      </Box>
+
+      {/* Statistics Cards */}
+      {stats && (
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="text.secondary" gutterBottom>
+                  Total Rooms
+                </Typography>
+                <Typography variant="h4">{stats.total_rooms || 0}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="text.secondary" gutterBottom>
+                  Occupied
+                </Typography>
+                <Typography variant="h4">{stats.occupied_rooms || 0}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="text.secondary" gutterBottom>
+                  Occupancy Rate
+                </Typography>
+                <Typography variant="h4">{stats.occupancy_rate || 0}%</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="text.secondary" gutterBottom>
+                  Revenue (Month)
+                </Typography>
+                <Typography variant="h4">₹{(stats.revenue_month || 0).toLocaleString()}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
+        <Tab label="Bookings" />
+        <Tab label="Rooms" />
+      </Tabs>
+
+      {/* Bookings Tab */}
+      {activeTab === 0 && (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Booking #</TableCell>
+                <TableCell>Guest Name</TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Check-in</TableCell>
+                <TableCell>Check-out</TableCell>
+                <TableCell>Room</TableCell>
+                <TableCell>Amount</TableCell>
+                <TableCell>Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {bookings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">No bookings found. Use New Booking to create one.</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                bookings.map((booking) => (
+                  <TableRow key={booking.id}>
+                    <TableCell>{booking.booking_number}</TableCell>
+                    <TableCell>{booking.guest_name}</TableCell>
+                    <TableCell>{booking.guest_phone}</TableCell>
+                    <TableCell>{new Date(booking.check_in_date).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(booking.check_out_date).toLocaleDateString()}</TableCell>
+                    <TableCell>{booking.room_id}</TableCell>
+                    <TableCell>₹{booking.total_amount}</TableCell>
+                    <TableCell>
+                      <Chip label={booking.status} color={getStatusColor(booking.status)} size="small" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Rooms Tab */}
+      {activeTab === 1 && (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Room #</TableCell>
+                <TableCell>Type</TableCell>
+                <TableCell>Floor</TableCell>
+                <TableCell>Capacity</TableCell>
+                <TableCell>Rate/Night</TableCell>
+                <TableCell>Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rooms.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">No rooms found. Create rooms to start managing bookings.</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rooms.map((room) => (
+                  <TableRow key={room.id}>
+                    <TableCell>{room.room_number}</TableCell>
+                    <TableCell>{room.room_type}</TableCell>
+                    <TableCell>{room.floor}</TableCell>
+                    <TableCell>{room.capacity}</TableCell>
+                    <TableCell>₹{room.rate_per_night}</TableCell>
+                    <TableCell>
+                      <Chip label={room.status} color={getStatusColor(room.status)} size="small" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* New Booking Dialog */}
+      <Dialog open={openBookingDialog} onClose={() => setOpenBookingDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>New Booking</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Guest Name"
+                value={bookingForm.guest_name}
+                onChange={(e) => setBookingForm({ ...bookingForm, guest_name: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Phone"
+                value={bookingForm.guest_phone}
+                onChange={(e) => setBookingForm({ ...bookingForm, guest_phone: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={bookingForm.guest_email}
+                onChange={(e) => setBookingForm({ ...bookingForm, guest_email: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Company"
+                value={bookingForm.guest_company}
+                onChange={(e) => setBookingForm({ ...bookingForm, guest_company: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                select
+                label="Room"
+                value={bookingForm.room_id}
+                onChange={(e) => setBookingForm({ ...bookingForm, room_id: e.target.value })}
+              >
+                {rooms
+                  .filter((r) => r.status === 'available')
+                  .map((room) => (
+                    <MenuItem key={room.id} value={room.id}>
+                      {room.room_number} - {room.room_type} (₹{room.rate_per_night})
+                    </MenuItem>
+                  ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Cost Center"
+                value={bookingForm.cost_center}
+                onChange={(e) => setBookingForm({ ...bookingForm, cost_center: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Check-in Date"
+                InputLabelProps={{ shrink: true }}
+                value={bookingForm.check_in_date}
+                onChange={(e) => setBookingForm({ ...bookingForm, check_in_date: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="date"
+                label="Check-out Date"
+                InputLabelProps={{ shrink: true }}
+                value={bookingForm.check_out_date}
+                onChange={(e) => setBookingForm({ ...bookingForm, check_out_date: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                select
+                label="Meal Plan"
+                value={bookingForm.meal_plan}
+                onChange={(e) => setBookingForm({ ...bookingForm, meal_plan: e.target.value })}
+              >
+                <MenuItem value="breakfast">Breakfast Only</MenuItem>
+                <MenuItem value="half_board">Half Board</MenuItem>
+                <MenuItem value="full_board">Full Board</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Special Requests"
+                value={bookingForm.special_requests}
+                onChange={(e) => setBookingForm({ ...bookingForm, special_requests: e.target.value })}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenBookingDialog(false)}>Cancel</Button>
+          <Button onClick={handleSubmitBooking} variant="contained" disabled={createBookingMutation.isPending}>
+            {createBookingMutation.isPending ? 'Creating...' : 'Create Booking'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
+
