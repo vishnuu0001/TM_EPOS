@@ -12,8 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from shared.database import get_db
 from shared.auth import get_current_user
-from services.colony_maintenance.models import MaintenanceRequest, Vendor, Asset, RequestStatus
-from services.colony_maintenance.schemas import (
+from models import MaintenanceRequest, Vendor, Asset, RequestStatus
+from schemas import (
     MaintenanceRequestCreate, MaintenanceRequestUpdate, MaintenanceRequestResponse,
     VendorCreate, VendorResponse, AssetCreate, AssetResponse,
     FeedbackCreate, DashboardStats
