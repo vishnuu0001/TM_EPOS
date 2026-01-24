@@ -52,6 +52,12 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "platform": "vercel"}
 
+# Vercel function path can strip /api prefix; provide alias
+@app.get("/health")
+async def health_check_alias():
+    """Health check alias for Vercel routing"""
+    return {"status": "healthy", "platform": "vercel"}
+
 # Authentication endpoints
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(
