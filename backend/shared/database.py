@@ -1,13 +1,35 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.engine.url import make_url
 from typing import Generator
 from .config import settings
 import os
 
-# Ensure data directory exists
-data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
-os.makedirs(data_dir, exist_ok=True)
+# Ensure SQLite database directory exists (use DATABASE_URL path, not repo paths)
+def _ensure_sqlite_dir(database_url: str) -> None:
+    try:
+        url = make_url(database_url)
+    except Exception:
+        return
+
+    if url.drivername != "sqlite":
+        return
+
+    # sqlite memory does not need a directory
+    if url.database in (None, "", ":memory:"):
+        return
+
+    db_path = url.database
+    # Handle relative paths like sqlite:///./tmp/epos.db
+    if not os.path.isabs(db_path):
+        db_path = os.path.abspath(db_path)
+
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+
+_ensure_sqlite_dir(settings.DATABASE_URL)
 
 # Create database engine with SQLite-specific settings
 connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
