@@ -64,11 +64,14 @@ def _startup_init_db():
 
 # CORS Configuration for Vercel
 _raw_cors = os.getenv("CORS_ORIGINS", "").strip()
+_frontend_origin = os.getenv("FRONTEND_URL", "").strip()
 _cors_origins = [
     "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:8000",
 ]
+if _frontend_origin:
+    _cors_origins.append(_frontend_origin)
 if _raw_cors:
     try:
         parsed = json.loads(_raw_cors)
@@ -131,7 +134,7 @@ async def health_check_alias():
     return {"status": "healthy", "platform": "vercel"}
 
 
-@app.options("/api/{path:path}")
+@app.options("/{path:path}")
 async def preflight_handler(path: str, request: Request):
     """Handle CORS preflight requests explicitly."""
     origin = request.headers.get("origin", "*")
