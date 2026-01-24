@@ -10,8 +10,8 @@ import json
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.database import get_db, init_db
-from shared.auth import create_access_token, verify_password
+from shared.database import get_db, init_db, SessionLocal
+from shared.auth import create_access_token, verify_password, get_password_hash
 from shared.models import User
 from shared.schemas import TokenResponse, UserResponse, MessageResponse
 
@@ -24,9 +24,42 @@ app = FastAPI(
     openapi_url="/api/openapi.json"
 )
 
+def _ensure_default_admin() -> None:
+    """
+    Create a default admin user if none exists and env vars are provided.
+    This avoids 401 on first login in a fresh Vercel SQLite database.
+    """
+    email = os.getenv("DEFAULT_ADMIN_EMAIL")
+    password = os.getenv("DEFAULT_ADMIN_PASSWORD")
+    employee_id = os.getenv("DEFAULT_ADMIN_EMPLOYEE_ID", "EMP0001")
+    full_name = os.getenv("DEFAULT_ADMIN_FULL_NAME", "Admin User")
+
+    if not email or not password:
+        return
+
+    db = SessionLocal()
+    try:
+        existing = db.query(User).filter(User.email == email).first()
+        if existing:
+            return
+
+        user = User(
+            email=email,
+            employee_id=employee_id,
+            full_name=full_name,
+            password_hash=get_password_hash(password),
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+    finally:
+        db.close()
+
+
 @app.on_event("startup")
 def _startup_init_db():
     init_db()
+    _ensure_default_admin()
 
 # CORS Configuration for Vercel
 _raw_cors = os.getenv("CORS_ORIGINS", "").strip()
