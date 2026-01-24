@@ -2,10 +2,10 @@ import axios from 'axios'
 import { toast } from 'react-toastify'
 
 // Support both local and Vercel deployment
-const API_BASE_URL = import.meta.env.VITE_API_URL ||
-  (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
-    ? window.location.origin
-    : 'http://localhost:8000')
+const isVercel = typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+const API_BASE_URL = isVercel
+  ? window.location.origin
+  : (import.meta.env.VITE_API_URL || 'http://localhost:8000')
 
 // Create axios instance
 const axiosInstance = axios.create({
