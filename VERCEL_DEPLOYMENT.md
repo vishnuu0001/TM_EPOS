@@ -102,11 +102,13 @@ vercel
    **Backend:**
    ```
    DATABASE_URL=sqlite:///./tmp/epos.db
-   SECRET_KEY="9xp5cNa3iTm2NgX/mmFcHeK3yXjRVhpDfyiR+SslNPM="
+   SECRET_KEY=9xp5cNa3iTm2NgX/mmFcHeK3yXjRVhpDfyiR+SslNPM=
    ALGORITHM=HS256
    ACCESS_TOKEN_EXPIRE_MINUTES=525600
    CORS_ORIGINS=["https://*.vercel.app"]
    ```
+
+   **Important:** Type the SECRET_KEY value directly (no quotes, no leading `@`, no Vercel secret reference). If the dashboard auto-converts it to `@secret_key`, delete that entry and re-add `SECRET_KEY` as a plain value. CLI alternative: `vercel env add SECRET_KEY` and paste the value for each environment.
 
    **Note**: SQLite on Vercel lives in `/tmp` and is ephemeral. For persistence, migrate to Turso or PostgreSQL (e.g., Vercel Postgres/Neon) and update `DATABASE_URL` accordingly.
 
