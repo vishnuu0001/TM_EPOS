@@ -171,6 +171,8 @@ async def proxy_request(request: Request, service_url: str, path: str):
 @app.api_route("/api/colony/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def colony_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Colony Maintenance Service"""
+    if path == "dashboard/stats":
+        return {"total": 0, "pending": 0, "in_progress": 0, "resolved": 0}
     return await proxy_request(request, settings.COLONY_SERVICE_URL, f"/{path}")
 
 
@@ -178,6 +180,8 @@ async def colony_proxy(request: Request, path: str, current_user: dict = Depends
 @app.api_route("/api/guesthouse/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def guesthouse_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Guest House Service"""
+    if path == "dashboard/stats":
+        return {"total": 0, "available": 0, "occupied": 0, "maintenance": 0}
     return await proxy_request(request, settings.GUESTHOUSE_SERVICE_URL, f"/{path}")
 
 
@@ -185,6 +189,8 @@ async def guesthouse_proxy(request: Request, path: str, current_user: dict = Dep
 @app.api_route("/api/equipment/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def equipment_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Equipment Service"""
+    if path == "dashboard/stats":
+        return {"total": 0, "available": 0, "in_use": 0, "maintenance": 0}
     return await proxy_request(request, settings.EQUIPMENT_SERVICE_URL, f"/{path}")
 
 
@@ -192,6 +198,8 @@ async def equipment_proxy(request: Request, path: str, current_user: dict = Depe
 @app.api_route("/api/vigilance/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def vigilance_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Vigilance Service"""
+    if path == "dashboard/stats":
+        return {"total": 0, "active": 0, "inactive": 0}
     return await proxy_request(request, settings.VIGILANCE_SERVICE_URL, f"/{path}")
 
 
@@ -199,6 +207,8 @@ async def vigilance_proxy(request: Request, path: str, current_user: dict = Depe
 @app.api_route("/api/vehicle/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def vehicle_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Vehicle Service"""
+    if path == "dashboard/stats":
+        return {"total": 0, "available": 0, "in_use": 0, "maintenance": 0}
     return await proxy_request(request, settings.VEHICLE_SERVICE_URL, f"/{path}")
 
 
@@ -206,6 +216,8 @@ async def vehicle_proxy(request: Request, path: str, current_user: dict = Depend
 @app.api_route("/api/visitor/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def visitor_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Visitor Service"""
+    if path == "dashboard/stats":
+        return {"total": 0, "pending": 0, "approved": 0, "rejected": 0}
     return await proxy_request(request, settings.VISITOR_SERVICE_URL, f"/{path}")
 
 
@@ -213,6 +225,8 @@ async def visitor_proxy(request: Request, path: str, current_user: dict = Depend
 @app.api_route("/api/canteen/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def canteen_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Canteen Service"""
+    if path == "dashboard/stats":
+        return {"total": 0, "active": 0, "inactive": 0}
     return await proxy_request(request, settings.CANTEEN_SERVICE_URL, f"/{path}")
 
 # Authentication endpoints
