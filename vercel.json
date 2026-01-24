@@ -10,7 +10,7 @@
       }
     },
     {
-      "src": "backend/api-gateway/api/index.py",
+      "src": "backend/api-gateway/main.py",
       "use": "@vercel/python"
     },
     {
@@ -21,7 +21,7 @@
   "routes": [
     {
       "src": "/api/auth/(.*)",
-      "dest": "/backend/api-gateway/api/index.py"
+      "dest": "/backend/api-gateway/main.py"
     },
     {
       "src": "/api/colony/(.*)",
@@ -29,7 +29,7 @@
     },
     {
       "src": "/api/(.*)",
-      "dest": "/backend/api-gateway/api/index.py"
+      "dest": "/backend/api-gateway/main.py"
     },
     {
       "src": "/(.*)",
