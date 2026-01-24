@@ -187,7 +187,8 @@ from fastapi.responses import JSONResponse
 async def proxy_request(request: Request, service_url: str, path: str):
     """Proxy request to microservice"""
     async with httpx.AsyncClient() as client:
-        url = f"{service_url}{path}"
+        base_url = service_url.rstrip("/")
+        url = f"{base_url}{path}"
         headers = dict(request.headers)
         headers.pop("host", None)
 
