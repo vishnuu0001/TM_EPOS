@@ -4,12 +4,28 @@
     {
       "src": "api/index.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "api/health.py",
+      "use": "@vercel/python"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/api/index.py"
+      "src": "/health",
+      "dest": "/api/health.py"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.py"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.py"
     }
   ]
 }
