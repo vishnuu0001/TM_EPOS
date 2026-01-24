@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Request
+from fastapi import FastAPI, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -138,7 +138,7 @@ async def health_check_alias():
 async def preflight_handler(path: str, request: Request):
     """Handle CORS preflight requests explicitly."""
     origin = request.headers.get("origin", "*")
-    response = JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
     response.headers["Access-Control-Allow-Origin"] = origin
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
