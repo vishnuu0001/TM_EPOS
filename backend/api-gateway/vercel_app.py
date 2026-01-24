@@ -104,6 +104,11 @@ async def _cors_on_error(request: Request, call_next):
     else:
         try:
             response = await call_next(request)
+        except HTTPException as exc:
+            response = JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail}
+            )
         except Exception:
             response = JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -159,7 +164,14 @@ async def proxy_request(request: Request, service_url: str, path: str):
                 params=request.query_params,
                 timeout=10.0,
             )
-            return JSONResponse(content=response.json(), status_code=response.status_code)
+            try:
+                payload = response.json()
+                return JSONResponse(content=payload, status_code=response.status_code)
+            except ValueError:
+                return JSONResponse(
+                    content={"detail": response.text},
+                    status_code=response.status_code
+                )
         except httpx.RequestError as exc:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
