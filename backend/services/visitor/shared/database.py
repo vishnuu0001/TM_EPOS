@@ -25,6 +25,10 @@ def _ensure_sqlite_dir(database_url: str) -> None:
     if not os.path.isabs(db_path):
         db_path = os.path.abspath(db_path)
 
+    # Vercel read-only fix: map /var/task/tmp -> /tmp
+    if db_path.startswith(os.path.join(os.sep, "var", "task", "tmp")):
+        db_path = db_path.replace(os.path.join(os.sep, "var", "task", "tmp"), os.path.join(os.sep, "tmp"), 1)
+
     db_dir = os.path.dirname(db_path)
     if db_dir:
         os.makedirs(db_dir, exist_ok=True)
