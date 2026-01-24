@@ -10,7 +10,7 @@ import json
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.database import get_db
+from shared.database import get_db, init_db
 from shared.auth import create_access_token, verify_password
 from shared.models import User
 from shared.schemas import TokenResponse, UserResponse, MessageResponse
@@ -23,6 +23,10 @@ app = FastAPI(
     docs_url="/api/docs",
     openapi_url="/api/openapi.json"
 )
+
+@app.on_event("startup")
+def _startup_init_db():
+    init_db()
 
 # CORS Configuration for Vercel
 _raw_cors = os.getenv("CORS_ORIGINS", "").strip()
