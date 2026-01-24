@@ -7,6 +7,10 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).parent.parent
 DATA_DIR = BACKEND_DIR / "data"
 
+# Use Vercel writable temp directory when deployed
+_IS_VERCEL = bool(os.getenv("VERCEL")) or bool(os.getenv("VERCEL_ENV"))
+_DEFAULT_DB_URL = "sqlite:////tmp/epos.db" if _IS_VERCEL else f"sqlite:///{DATA_DIR}/epos.db"
+
 class Settings(BaseSettings):
     # Application
     APP_NAME: str = "ePOS"
@@ -14,7 +18,7 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     
     # Database - Use absolute path for SQLite
-    DATABASE_URL: str = f"sqlite:///{DATA_DIR}/epos.db"
+    DATABASE_URL: str = _DEFAULT_DB_URL
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
