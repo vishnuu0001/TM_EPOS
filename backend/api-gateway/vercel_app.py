@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 from sqlalchemy.orm import Session
+import httpx
 import sys
 import os
 import json
@@ -12,7 +13,8 @@ import json
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared.database import get_db, init_db, SessionLocal
-from shared.auth import create_access_token, verify_password, get_password_hash
+from shared.auth import create_access_token, verify_password, get_password_hash, get_current_user
+from shared.config import settings
 from shared.models import User
 from shared.schemas import TokenResponse, UserResponse, MessageResponse
 
@@ -97,13 +99,16 @@ async def _cors_on_error(request: Request, call_next):
     This prevents the browser from masking 500s as CORS failures.
     """
     origin = request.headers.get("origin")
-    try:
-        response = await call_next(request)
-    except Exception:
-        response = JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Internal server error"}
-        )
+    if request.method == "OPTIONS":
+        response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    else:
+        try:
+            response = await call_next(request)
+        except Exception:
+            response = JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal server error"}
+            )
 
     if origin:
         response.headers["Access-Control-Allow-Origin"] = origin
@@ -134,17 +139,81 @@ async def health_check_alias():
     return {"status": "healthy", "platform": "vercel"}
 
 
-@app.options("/{path:path}")
-async def preflight_handler(path: str, request: Request):
-    """Handle CORS preflight requests explicitly."""
-    origin = request.headers.get("origin", "*")
-    response = Response(status_code=status.HTTP_204_NO_CONTENT)
-    response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    response.headers["Vary"] = "Origin"
-    return response
+# Proxy endpoints to microservices
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+async def proxy_request(request: Request, service_url: str, path: str):
+    """Proxy request to microservice"""
+    async with httpx.AsyncClient() as client:
+        url = f"{service_url}{path}"
+        headers = dict(request.headers)
+        headers.pop("host", None)
+
+        try:
+            response = await client.request(
+                method=request.method,
+                url=url,
+                headers=headers,
+                content=await request.body(),
+                params=request.query_params,
+                timeout=10.0,
+            )
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Upstream service unavailable at {service_url}. Error: {exc}"
+            )
+
+
+# Colony Maintenance Service routes
+@app.api_route("/api/colony/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def colony_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
+    """Proxy to Colony Maintenance Service"""
+    return await proxy_request(request, settings.COLONY_SERVICE_URL, f"/{path}")
+
+
+# Guest House Service routes
+@app.api_route("/api/guesthouse/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def guesthouse_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
+    """Proxy to Guest House Service"""
+    return await proxy_request(request, settings.GUESTHOUSE_SERVICE_URL, f"/{path}")
+
+
+# Equipment Service routes
+@app.api_route("/api/equipment/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def equipment_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
+    """Proxy to Equipment Service"""
+    return await proxy_request(request, settings.EQUIPMENT_SERVICE_URL, f"/{path}")
+
+
+# Vigilance Service routes
+@app.api_route("/api/vigilance/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def vigilance_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
+    """Proxy to Vigilance Service"""
+    return await proxy_request(request, settings.VIGILANCE_SERVICE_URL, f"/{path}")
+
+
+# Vehicle Service routes
+@app.api_route("/api/vehicle/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def vehicle_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
+    """Proxy to Vehicle Service"""
+    return await proxy_request(request, settings.VEHICLE_SERVICE_URL, f"/{path}")
+
+
+# Visitor Service routes
+@app.api_route("/api/visitor/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def visitor_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
+    """Proxy to Visitor Service"""
+    return await proxy_request(request, settings.VISITOR_SERVICE_URL, f"/{path}")
+
+
+# Canteen Service routes
+@app.api_route("/api/canteen/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def canteen_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
+    """Proxy to Canteen Service"""
+    return await proxy_request(request, settings.CANTEEN_SERVICE_URL, f"/{path}")
 
 # Authentication endpoints
 @app.post("/api/auth/login", response_model=TokenResponse)
