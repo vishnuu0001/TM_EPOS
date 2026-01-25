@@ -1,11 +1,6 @@
 import axios from 'axios'
 import { toast } from 'react-toastify'
-
-// Support both local and Vercel deployment
-const isVercel = typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
-const API_BASE_URL = isVercel
-  ? window.location.origin
-  : (import.meta.env.VITE_API_URL || 'http://localhost:8000')
+import { API_BASE_URL, readToken, clearAuth } from './storage'
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -19,7 +14,7 @@ const axiosInstance = axios.create({
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = readToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -45,8 +40,7 @@ axiosInstance.interceptors.response.use(
           const isLoginRequest = error.config?.url?.includes('/auth/login')
 
           if (!isLoginPage && !isLoginRequest) {
-            localStorage.removeItem('token')
-            localStorage.removeItem('user')
+            clearAuth()
             window.location.href = '/login'
             toast.error('Session expired. Please login again.')
           } else if (isLoginRequest) {

@@ -1,18 +1,19 @@
 import { createSlice } from '@reduxjs/toolkit'
+import { readToken, readUser, writeAuth, clearAuth } from '../../services/storage'
 
-const storedUser = localStorage.getItem('user')
+const storedUser = readUser()
 
 const initialState = {
-  user: storedUser ? JSON.parse(storedUser) : null,
-  token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
+  user: storedUser || null,
+  token: readToken(),
+  isAuthenticated: !!readToken(),
   loading: false,
 }
 
 console.log('Auth initial state:', initialState)
-console.log('LocalStorage token:', localStorage.getItem('token')?.substring(0, 20))
-console.log('LocalStorage user:', localStorage.getItem('user'))
-console.log('Computed isAuthenticated:', !!localStorage.getItem('token'))
+console.log('LocalStorage token:', readToken()?.substring(0, 20))
+console.log('LocalStorage user:', storedUser)
+console.log('Computed isAuthenticated:', !!readToken())
 
 const authSlice = createSlice({
   name: 'auth',
@@ -23,8 +24,7 @@ const authSlice = createSlice({
       state.user = action.payload.user
       state.token = action.payload.token
       state.isAuthenticated = true
-      localStorage.setItem('token', action.payload.token)
-      localStorage.setItem('user', JSON.stringify(action.payload.user))
+      writeAuth(action.payload.user, action.payload.token)
       console.log('Auth state updated:', {
         hasUser: !!state.user,
         hasToken: !!state.token,
@@ -35,8 +35,7 @@ const authSlice = createSlice({
       state.user = null
       state.token = null
       state.isAuthenticated = false
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      clearAuth()
     },
     setLoading: (state, action) => {
       state.loading = action.payload
