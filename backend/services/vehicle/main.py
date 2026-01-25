@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import sys
 from pathlib import Path
 import os
+import tempfile
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -34,46 +35,48 @@ def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
 
 
+def _should_seed_first_boot(service_name: str) -> bool:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return True
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    return not os.path.exists(marker_path)
+
+
+def _mark_seeded(service_name: str) -> None:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    os.makedirs(marker_dir, exist_ok=True)
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    with open(marker_path, "w", encoding="utf-8") as handle:
+        handle.write("seeded")
+
+
 def _seed_vehicle_data(db: Session) -> None:
-    """Seed vehicles and drivers when empty."""
-    if db.query(Vehicle).count() == 0:
-        vehicles = [
-            {
-                "registration_number": "DL01AB1234",
-                "vehicle_type": VehicleType.CAR,
-                "make": "Maruti",
-                "model": "Swift",
-                "year": 2020,
-                "capacity": 4,
-                "fuel_type": "Petrol",
-                "status": VehicleStatus.AVAILABLE,
-                "current_odometer": 15000,
-            },
-            {
-                "registration_number": "DL01CD5678",
-                "vehicle_type": VehicleType.CAR,
-                "make": "Mahindra",
-                "model": "Scorpio",
-                "year": 2021,
-                "capacity": 7,
-                "fuel_type": "Diesel",
-                "status": VehicleStatus.AVAILABLE,
-                "current_odometer": 25000,
-            },
-            {
-                "registration_number": "DL01EF9012",
-                "vehicle_type": VehicleType.BUS,
-                "make": "Tata",
-                "model": "LP 410",
-                "year": 2019,
-                "capacity": 30,
-                "fuel_type": "Diesel",
-                "status": VehicleStatus.IN_USE,
-                "current_odometer": 50000,
-            },
-        ]
-        for item in vehicles:
-            db.add(Vehicle(**item))
+    """Seed vehicles and drivers up to target count."""
+    target = int(os.getenv("SEED_VEHICLE_COUNT", "1000"))
+    existing = db.query(Vehicle).count()
+    if existing < target:
+        base_index = existing + 1
+        type_cycle = [VehicleType.CAR, VehicleType.BUS, VehicleType.TRUCK, VehicleType.UTILITY, VehicleType.AMBULANCE]
+        for i in range(base_index, target + 1):
+            v_type = type_cycle[i % len(type_cycle)]
+            db.add(
+                Vehicle(
+                    registration_number=f"DL99AA{i:04d}",
+                    vehicle_type=v_type,
+                    make="AutoGen",
+                    model=f"Model-{i % 100}",
+                    year=2019 + (i % 6),
+                    capacity=4 if v_type == VehicleType.CAR else 30,
+                    fuel_type="Diesel" if i % 2 == 0 else "Petrol",
+                    status=VehicleStatus.AVAILABLE,
+                    current_odometer=10000 + i * 3,
+                )
+            )
         db.commit()
 
     if db.query(Driver).count() == 0:
@@ -102,10 +105,11 @@ def _seed_vehicle_data(db: Session) -> None:
 
 @app.on_event("startup")
 async def startup_event():
-    if _should_seed():
+    if _should_seed() and _should_seed_first_boot("vehicle"):
         db = next(get_db())
         try:
             _seed_vehicle_data(db)
+            _mark_seeded("vehicle")
         finally:
             db.close()
 

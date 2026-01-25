@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
 
 
@@ -49,17 +48,17 @@ class MaintenanceStatusChange(BaseModel):
 
 
 class MaintenanceRequestResponse(BaseModel):
-    id: UUID
+    id: str
     request_number: str
-    resident_id: UUID
+    resident_id: str
     quarter_number: str
     category: str
     sub_category: Optional[str]
     description: str
     priority: str
     status: RequestStatusEnum
-    assigned_vendor_id: Optional[UUID]
-    assigned_technician_id: Optional[UUID]
+    assigned_vendor_id: Optional[str]
+    assigned_technician_id: Optional[str]
     estimated_cost: Optional[float]
     actual_cost: Optional[float]
     rating: Optional[int]
@@ -72,10 +71,10 @@ class MaintenanceRequestResponse(BaseModel):
 
 
 class RequestStatusHistoryResponse(BaseModel):
-    id: UUID
+    id: str
     status: RequestStatusEnum
     notes: Optional[str]
-    changed_by: Optional[UUID]
+    changed_by: Optional[str]
     changed_at: datetime
 
     class Config:
@@ -101,7 +100,7 @@ class VendorUpdate(BaseModel):
 
 
 class VendorResponse(BaseModel):
-    id: UUID
+    id: str
     name: str
     company_name: Optional[str]
     email: Optional[str]
@@ -142,7 +141,7 @@ class AssetUpdate(BaseModel):
 
 
 class AssetResponse(BaseModel):
-    id: UUID
+    id: str
     asset_number: str
     asset_type: str
     quarter_number: str
@@ -177,7 +176,7 @@ class ServiceCategoryUpdate(BaseModel):
 
 
 class ServiceCategoryResponse(BaseModel):
-    id: UUID
+    id: str
     name: str
     description: Optional[str]
     sla_hours: int
@@ -191,7 +190,7 @@ class ServiceCategoryResponse(BaseModel):
 
 # Feedback Schema
 class FeedbackCreate(BaseModel):
-    request_id: UUID
+    request_id: str
     rating: int = Field(..., ge=1, le=5)
     feedback: Optional[str] = None
 
@@ -216,13 +215,13 @@ class RecurringMaintenanceUpdate(BaseModel):
 
 
 class RecurringMaintenanceResponse(BaseModel):
-    id: UUID
+    id: str
     name: str
     description: Optional[str]
     category: str
     frequency: str
     next_schedule_date: datetime
-    assigned_vendor_id: Optional[UUID]
+    assigned_vendor_id: Optional[str]
     is_active: bool
     created_at: datetime
 
@@ -249,12 +248,12 @@ class TechnicianUpdate(BaseModel):
 
 
 class TechnicianResponse(BaseModel):
-    id: UUID
+    id: str
     name: str
     phone: Optional[str]
     email: Optional[str]
     specialization: Optional[str]
-    vendor_id: Optional[UUID]
+    vendor_id: Optional[str]
     rating: float
     is_active: bool
     created_at: datetime

@@ -4,6 +4,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 import sys
 import os
+import tempfile
 sys.path.append('../..')
 
 from shared.database import get_db, init_db
@@ -45,16 +46,37 @@ setup_exception_handlers(app)
 async def startup_event():
     """Initialize database on startup"""
     init_db()
-    if _should_seed():
+    if _should_seed() and _should_seed_first_boot("colony"):
         db = next(get_db())
         try:
             _seed_colony_data(db)
+            _mark_seeded("colony")
         finally:
             db.close()
 
 
 def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _should_seed_first_boot(service_name: str) -> bool:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return True
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    return not os.path.exists(marker_path)
+
+
+def _mark_seeded(service_name: str) -> None:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    os.makedirs(marker_dir, exist_ok=True)
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    with open(marker_path, "w", encoding="utf-8") as handle:
+        handle.write("seeded")
 
 
 def _seed_colony_data(db: Session) -> None:
@@ -169,6 +191,32 @@ def _seed_colony_data(db: Session) -> None:
         ]
         for item in recurring:
             db.add(RecurringMaintenance(**item))
+        db.commit()
+
+    # Maintenance Requests
+    target_requests = int(os.getenv("SEED_COLONY_REQUESTS", "1000"))
+    existing_requests = db.query(MaintenanceRequest).count()
+    if existing_requests < target_requests:
+        base_index = existing_requests + 1
+        status_cycle = [
+            RequestStatus.SUBMITTED,
+            RequestStatus.ASSIGNED,
+            RequestStatus.IN_PROGRESS,
+            RequestStatus.COMPLETED,
+        ]
+        for i in range(base_index, target_requests + 1):
+            db.add(
+                MaintenanceRequest(
+                    request_number=f"MR{datetime.utcnow().year}{i:06d}",
+                    resident_id="EMP0001",
+                    quarter_number=f"Q-{(i % 250) + 1}",
+                    category="Electrical",
+                    sub_category="Wiring",
+                    description="Auto-seeded maintenance request",
+                    priority="medium",
+                    status=status_cycle[i % len(status_cycle)],
+                )
+            )
         db.commit()
 
 

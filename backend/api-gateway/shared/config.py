@@ -24,10 +24,10 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     
     # Security
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    SECRET_KEY: str = "9xp5cNa3iTm2NgX/mmFcHeK3yXjRVhpDfyiR+SslNPM="
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 564230  # 24 hours
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 365
     
     # CORS
     CORS_ORIGINS: list = [

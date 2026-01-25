@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import sys
 from pathlib import Path
 import os
+import tempfile
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -34,55 +35,73 @@ def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
 
 
+def _should_seed_first_boot(service_name: str) -> bool:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return True
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    return not os.path.exists(marker_path)
+
+
+def _mark_seeded(service_name: str) -> None:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    os.makedirs(marker_dir, exist_ok=True)
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    with open(marker_path, "w", encoding="utf-8") as handle:
+        handle.write("seeded")
+
+
 def _seed_guesthouse_data(db: Session) -> None:
-    """Seed guesthouse rooms if empty."""
-    if db.query(Room).count() > 0:
+    """Seed guesthouse rooms up to target count."""
+    target = int(os.getenv("SEED_GUESTHOUSE_ROOMS", "1000"))
+    existing = db.query(Room).count()
+    if existing >= target:
         return
 
-    rooms = [
-        {
-            "room_number": "101",
-            "room_type": RoomType.SINGLE,
-            "floor": 1,
-            "capacity": 1,
-            "amenities": "[\"AC\", \"WiFi\", \"TV\"]",
-            "rate_per_night": 1500,
-            "status": RoomStatus.AVAILABLE,
-            "description": "Single room with AC",
-        },
-        {
-            "room_number": "102",
-            "room_type": RoomType.DOUBLE,
-            "floor": 1,
-            "capacity": 2,
-            "amenities": "[\"AC\", \"WiFi\"]",
-            "rate_per_night": 2000,
-            "status": RoomStatus.AVAILABLE,
-            "description": "Double room",
-        },
-        {
-            "room_number": "201",
-            "room_type": RoomType.SUITE,
-            "floor": 2,
-            "capacity": 4,
-            "amenities": "[\"AC\", \"WiFi\", \"TV\", \"MiniBar\"]",
-            "rate_per_night": 3500,
-            "status": RoomStatus.MAINTENANCE,
-            "description": "Suite under maintenance",
-        },
-    ]
+    existing_numbers = {
+        r.room_number for r in db.query(Room.room_number).all()
+    }
+    base_index = existing + 1
+    type_cycle = [RoomType.SINGLE, RoomType.DOUBLE, RoomType.SUITE, RoomType.DORMITORY]
+    created = 0
+    i = base_index
+    while existing + created < target:
+        room_number = f"GH-{100 + i}"
+        if room_number in existing_numbers:
+            i += 1
+            continue
 
-    for item in rooms:
-        db.add(Room(**item))
+        room_type = type_cycle[i % len(type_cycle)]
+        capacity = 1 if room_type == RoomType.SINGLE else 2 if room_type == RoomType.DOUBLE else 4
+        db.add(
+            Room(
+                room_number=room_number,
+                room_type=room_type,
+                floor=((i - 1) % 10) + 1,
+                capacity=capacity,
+                amenities="[\"AC\", \"WiFi\"]",
+                rate_per_night=1500 + (i % 5) * 250,
+                status=RoomStatus.AVAILABLE,
+                description="Auto-seeded room",
+            )
+        )
+        existing_numbers.add(room_number)
+        created += 1
+        i += 1
     db.commit()
 
 
 @app.on_event("startup")
 async def startup_event():
-    if _should_seed():
+    if _should_seed() and _should_seed_first_boot("guesthouse"):
         db = next(get_db())
         try:
             _seed_guesthouse_data(db)
+            _mark_seeded("guesthouse")
         finally:
             db.close()
 

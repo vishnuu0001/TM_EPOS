@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import sys
 from pathlib import Path
 import os
+import tempfile
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -34,64 +35,69 @@ def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
 
 
+def _should_seed_first_boot(service_name: str) -> bool:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return True
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    return not os.path.exists(marker_path)
+
+
+def _mark_seeded(service_name: str) -> None:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    os.makedirs(marker_dir, exist_ok=True)
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    with open(marker_path, "w", encoding="utf-8") as handle:
+        handle.write("seeded")
+
+
 def _seed_equipment_data(db: Session) -> None:
-    """Seed equipment catalog when empty."""
-    if db.query(Equipment).count() > 0:
+    """Seed equipment catalog up to target count."""
+    target = int(os.getenv("SEED_EQUIPMENT_COUNT", "1000"))
+    existing = db.query(Equipment).count()
+    if existing >= target:
         return
 
-    items = [
-        {
-            "equipment_number": "EQ-1001",
-            "name": "Mobile Crane",
-            "equipment_type": EquipmentType.CRANE,
-            "manufacturer": "Tata",
-            "model": "XCMG 25T",
-            "capacity": "25T",
-            "location": "Plant Yard",
-            "status": EquipmentStatus.AVAILABLE,
-            "hourly_rate": 1200,
-            "requires_certification": True,
-            "description": "Mobile crane for heavy lifts",
-        },
-        {
-            "equipment_number": "EQ-1002",
-            "name": "Forklift",
-            "equipment_type": EquipmentType.FORKLIFT,
-            "manufacturer": "Godrej",
-            "model": "GX 5",
-            "capacity": "5T",
-            "location": "Warehouse",
-            "status": EquipmentStatus.AVAILABLE,
-            "hourly_rate": 600,
-            "requires_certification": True,
-            "description": "Warehouse forklift",
-        },
-        {
-            "equipment_number": "EQ-1003",
-            "name": "Diesel Generator",
-            "equipment_type": EquipmentType.GENERATOR,
-            "manufacturer": "Kirloskar",
-            "model": "DG 125",
-            "capacity": "125 kVA",
-            "location": "Power House",
-            "status": EquipmentStatus.MAINTENANCE,
-            "hourly_rate": 800,
-            "requires_certification": False,
-            "description": "Backup generator",
-        },
+    base_index = existing + 1
+    type_cycle = [
+        EquipmentType.CRANE,
+        EquipmentType.FORKLIFT,
+        EquipmentType.EXCAVATOR,
+        EquipmentType.LOADER,
+        EquipmentType.TRUCK,
+        EquipmentType.GENERATOR,
     ]
-
-    for item in items:
-        db.add(Equipment(**item))
+    for i in range(base_index, target + 1):
+        e_type = type_cycle[i % len(type_cycle)]
+        db.add(
+            Equipment(
+                equipment_number=f"EQ-{1000 + i}",
+                name=f"{e_type.value.title()} {i}",
+                equipment_type=e_type,
+                manufacturer="AutoGen",
+                model=f"Model-{i % 100}",
+                capacity=f"{(i % 50) + 1}T",
+                location="Plant Yard",
+                status=EquipmentStatus.AVAILABLE,
+                hourly_rate=500 + (i % 10) * 50,
+                requires_certification=True,
+                description="Auto-seeded equipment",
+            )
+        )
     db.commit()
 
 
 @app.on_event("startup")
 async def startup_event():
-    if _should_seed():
+    if _should_seed() and _should_seed_first_boot("equipment"):
         db = next(get_db())
         try:
             _seed_equipment_data(db)
+            _mark_seeded("equipment")
         finally:
             db.close()
 

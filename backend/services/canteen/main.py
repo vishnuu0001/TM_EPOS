@@ -5,6 +5,7 @@ from typing import List, Optional
 from datetime import datetime, date, timedelta
 import sys
 import os
+import tempfile
 sys.path.append('../..')
 
 from shared.database import get_db, init_db
@@ -44,41 +45,49 @@ def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
 
 
+def _should_seed_first_boot(service_name: str) -> bool:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return True
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    return not os.path.exists(marker_path)
+
+
+def _mark_seeded(service_name: str) -> None:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    os.makedirs(marker_dir, exist_ok=True)
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    with open(marker_path, "w", encoding="utf-8") as handle:
+        handle.write("seeded")
+
+
 def _seed_canteen_data(db: Session) -> None:
-    """Seed canteen data if empty (menus/workers/menu items)."""
+    """Seed canteen data up to target count (workers + menus/items)."""
+    target_workers = int(os.getenv("SEED_CANTEEN_WORKERS", "1000"))
     has_menus = db.query(Menu).count() > 0
     has_items = db.query(MenuItem).count() > 0
-    has_workers = db.query(Worker).count() > 0
 
-    if has_menus and has_items and has_workers:
-        return
-
-    # Workers
-    if not has_workers:
-        workers = [
-            {
-                "worker_number": "W202600001",
-                "full_name": "Mohan Kumar",
-                "employee_id": "EMP001",
-                "worker_type": WorkerType.PERMANENT,
-                "department": "Production",
-                "is_active": True,
-                "canteen_access": True,
-                "wallet_balance": 500,
-            },
-            {
-                "worker_number": "W202600002",
-                "full_name": "Ramesh Singh",
-                "employee_id": "EMP002",
-                "worker_type": WorkerType.CONTRACT,
-                "department": "Maintenance",
-                "is_active": True,
-                "canteen_access": True,
-                "wallet_balance": 300,
-            },
-        ]
-        for worker_data in workers:
-            db.add(Worker(**worker_data))
+    existing_workers = db.query(Worker).count()
+    if existing_workers < target_workers:
+        base_index = existing_workers + 1
+        type_cycle = [WorkerType.PERMANENT, WorkerType.CONTRACT, WorkerType.CASUAL]
+        for i in range(base_index, target_workers + 1):
+            db.add(
+                Worker(
+                    worker_number=f"W2026{i:06d}",
+                    full_name=f"Worker {i}",
+                    employee_id=f"EMP{i:06d}",
+                    worker_type=type_cycle[i % len(type_cycle)],
+                    department="Production",
+                    is_active=True,
+                    canteen_access=True,
+                    wallet_balance=200 + (i % 5) * 50,
+                )
+            )
 
     # Menus
     if not has_menus:
@@ -166,10 +175,11 @@ def _seed_canteen_data(db: Session) -> None:
 async def startup_event():
     """Initialize database on startup"""
     init_db()
-    if _should_seed():
+    if _should_seed() and _should_seed_first_boot("canteen"):
         db = next(get_db())
         try:
             _seed_canteen_data(db)
+            _mark_seeded("canteen")
         finally:
             db.close()
 

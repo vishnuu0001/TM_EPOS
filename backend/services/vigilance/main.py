@@ -8,6 +8,7 @@ import qrcode
 import io
 import base64
 import os
+import tempfile
 sys.path.append('../..')
 
 from shared.database import get_db, init_db
@@ -46,10 +47,11 @@ setup_exception_handlers(app)
 async def startup_event():
     """Initialize database on startup"""
     init_db()
-    if _should_seed():
+    if _should_seed() and _should_seed_first_boot("vigilance"):
         db = next(get_db())
         try:
             _seed_vigilance_data(db)
+            _mark_seeded("vigilance")
         finally:
             db.close()
 
@@ -58,40 +60,49 @@ def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
 
 
+def _should_seed_first_boot(service_name: str) -> bool:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return True
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    return not os.path.exists(marker_path)
+
+
+def _mark_seeded(service_name: str) -> None:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    os.makedirs(marker_dir, exist_ok=True)
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    with open(marker_path, "w", encoding="utf-8") as handle:
+        handle.write("seeded")
+
+
 def _seed_vigilance_data(db: Session) -> None:
-    """Seed checkpoints when empty."""
-    if db.query(Checkpoint).count() > 0:
+    """Seed checkpoints up to target count."""
+    target = int(os.getenv("SEED_VIGILANCE_CHECKPOINTS", "1000"))
+    existing = db.query(Checkpoint).count()
+    if existing >= target:
         return
 
-    checkpoints = [
-        {
-            "checkpoint_number": "CP0001",
-            "checkpoint_name": "Main Gate",
-            "location_description": "Primary entry gate",
-            "sector": "A",
-            "building": "Gatehouse",
-            "floor": "Ground",
-            "is_active": True,
-            "is_critical": True,
-            "expected_scan_interval": 30,
-            "patrol_sequence": 1,
-        },
-        {
-            "checkpoint_number": "CP0002",
-            "checkpoint_name": "Warehouse",
-            "location_description": "Warehouse loading bay",
-            "sector": "B",
-            "building": "Warehouse",
-            "floor": "Ground",
-            "is_active": True,
-            "is_critical": False,
-            "expected_scan_interval": 45,
-            "patrol_sequence": 2,
-        },
-    ]
-
-    for item in checkpoints:
-        db.add(Checkpoint(**item))
+    base_index = existing + 1
+    for i in range(base_index, target + 1):
+        db.add(
+            Checkpoint(
+                checkpoint_number=f"CP{i:04d}",
+                checkpoint_name=f"Checkpoint {i}",
+                location_description="Auto-seeded checkpoint",
+                sector=chr(65 + (i % 5)),
+                building=f"Block-{(i % 10) + 1}",
+                floor="Ground",
+                is_active=True,
+                is_critical=(i % 10 == 0),
+                expected_scan_interval=30 + (i % 30),
+                patrol_sequence=i,
+            )
+        )
     db.commit()
 
 

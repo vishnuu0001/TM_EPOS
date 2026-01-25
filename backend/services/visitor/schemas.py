@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
 
 
@@ -76,14 +75,14 @@ class VisitorRequestUpdate(BaseModel):
 
 
 class VisitorRequestResponse(BaseModel):
-    id: UUID
+    id: str
     request_number: str
     visitor_name: str
     visitor_company: Optional[str]
     visitor_phone: str
     visitor_email: Optional[str]
     visitor_type: VisitorTypeEnum
-    sponsor_employee_id: UUID
+    sponsor_employee_id: str
     sponsor_name: str
     sponsor_department: Optional[str]
     purpose_of_visit: str
@@ -96,7 +95,7 @@ class VisitorRequestResponse(BaseModel):
     approved_by_sponsor: bool
     approved_by_safety: bool
     approved_by_security: bool
-    final_approved_by: Optional[UUID]
+    final_approved_by: Optional[str]
     final_approved_at: Optional[datetime]
     rejection_reason: Optional[str]
     created_at: datetime
@@ -123,8 +122,8 @@ class SafetyTrainingUpdate(BaseModel):
 
 
 class SafetyTrainingResponse(BaseModel):
-    id: UUID
-    request_id: UUID
+    id: str
+    request_id: str
     video_url: Optional[str]
     video_duration: Optional[int]
     video_watched: bool
@@ -155,8 +154,8 @@ class TrainingCertificateCreate(BaseModel):
 
 
 class TrainingCertificateResponse(BaseModel):
-    id: UUID
-    training_id: UUID
+    id: str
+    training_id: str
     certificate_number: str
     visitor_name: str
     issue_date: datetime
@@ -186,15 +185,15 @@ class MedicalClearanceUpdate(BaseModel):
 
 
 class MedicalClearanceResponse(BaseModel):
-    id: UUID
-    request_id: UUID
+    id: str
+    request_id: str
     document_name: Optional[str]
     document_path: Optional[str]
     document_type: Optional[str]
     document_size: Optional[int]
     uploaded_at: Optional[datetime]
     verified: bool
-    verified_by: Optional[UUID]
+    verified_by: Optional[str]
     verified_at: Optional[datetime]
     verification_notes: Optional[str]
     valid_from: Optional[datetime]
@@ -229,8 +228,8 @@ class GatePassUpdate(BaseModel):
 
 
 class GatePassResponse(BaseModel):
-    id: UUID
-    request_id: UUID
+    id: str
+    request_id: str
     pass_number: str
     visitor_name: str
     visitor_company: Optional[str]
@@ -246,7 +245,7 @@ class GatePassResponse(BaseModel):
     special_instructions: Optional[str]
     sponsor_name: str
     sponsor_contact: Optional[str]
-    issued_by: Optional[UUID]
+    issued_by: Optional[str]
     issued_at: datetime
     created_at: datetime
     updated_at: datetime
@@ -272,13 +271,13 @@ class EntryExitCreate(BaseModel):
 
 
 class EntryExitResponse(BaseModel):
-    id: UUID
-    request_id: UUID
-    gate_pass_id: UUID
+    id: str
+    request_id: str
+    gate_pass_id: str
     log_type: EntryExitTypeEnum
     gate_number: Optional[str]
     timestamp: datetime
-    guard_id: Optional[UUID]
+    guard_id: Optional[str]
     guard_name: Optional[str]
     qr_scanned: bool
     manual_entry: bool

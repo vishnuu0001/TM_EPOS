@@ -5,23 +5,23 @@ from enum import Enum
 
 # Enums
 class RoomType(str, Enum):
-    SINGLE = "SINGLE"
-    DOUBLE = "DOUBLE"
-    SUITE = "SUITE"
-    DORMITORY = "DORMITORY"
+    SINGLE = "single"
+    DOUBLE = "double"
+    SUITE = "suite"
+    DORMITORY = "dormitory"
 
 class RoomStatus(str, Enum):
-    AVAILABLE = "AVAILABLE"
-    OCCUPIED = "OCCUPIED"
-    MAINTENANCE = "MAINTENANCE"
-    RESERVED = "RESERVED"
+    AVAILABLE = "available"
+    OCCUPIED = "occupied"
+    MAINTENANCE = "maintenance"
+    RESERVED = "reserved"
 
 class BookingStatus(str, Enum):
-    REQUESTED = "REQUESTED"
-    CONFIRMED = "CONFIRMED"
-    CHECKED_IN = "CHECKED_IN"
-    CHECKED_OUT = "CHECKED_OUT"
-    CANCELLED = "CANCELLED"
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    CHECKED_IN = "checked_in"
+    CHECKED_OUT = "checked_out"
+    CANCELLED = "cancelled"
 
 # Room Schemas
 class RoomBase(BaseModel):
@@ -30,7 +30,7 @@ class RoomBase(BaseModel):
     floor: int
     capacity: int
     amenities: Optional[str] = None
-    daily_rate: float
+    rate_per_night: float
     description: Optional[str] = None
 
 class RoomCreate(RoomBase):
@@ -40,7 +40,7 @@ class RoomUpdate(BaseModel):
     room_type: Optional[RoomType] = None
     capacity: Optional[int] = None
     amenities: Optional[str] = None
-    daily_rate: Optional[float] = None
+    rate_per_night: Optional[float] = None
     status: Optional[RoomStatus] = None
     description: Optional[str] = None
 

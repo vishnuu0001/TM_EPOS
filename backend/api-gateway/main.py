@@ -3,7 +3,13 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
 import sys
-sys.path.append('..')
+import os
+
+# Ensure backend folder is on sys.path for shared imports
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(CURRENT_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
 
 from shared.config import settings
 from shared.database import get_db, init_db
@@ -98,6 +104,8 @@ async def login(
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     """Get current user information"""
     return current_user
+
+
 
 
 @app.post("/api/auth/logout")

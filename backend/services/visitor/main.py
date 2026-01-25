@@ -8,6 +8,7 @@ import qrcode
 import io
 import base64
 import os
+import tempfile
 sys.path.append('../..')
 
 from shared.database import get_db, init_db
@@ -48,10 +49,11 @@ setup_exception_handlers(app)
 async def startup_event():
     """Initialize database on startup"""
     init_db()
-    if _should_seed():
+    if _should_seed() and _should_seed_first_boot("visitor"):
         db = next(get_db())
         try:
             _seed_visitor_data(db)
+            _mark_seeded("visitor")
         finally:
             db.close()
 
@@ -60,31 +62,67 @@ def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
 
 
+def _should_seed_first_boot(service_name: str) -> bool:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return True
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    return not os.path.exists(marker_path)
+
+
+def _mark_seeded(service_name: str) -> None:
+    flag = os.getenv("SEED_ON_FIRST_BOOT", "false").strip().lower() in {"1", "true", "yes"}
+    if not flag:
+        return
+    marker_dir = os.getenv("SEED_MARKER_DIR") or tempfile.gettempdir()
+    os.makedirs(marker_dir, exist_ok=True)
+    marker_path = os.path.join(marker_dir, f"epos_seeded_{service_name}.flag")
+    with open(marker_path, "w", encoding="utf-8") as handle:
+        handle.write("seeded")
+
+
 def _seed_visitor_data(db: Session) -> None:
-    """Seed visitor requests when empty."""
-    if db.query(VisitorRequest).count() > 0:
+    """Seed visitor requests when empty or below target count."""
+    target = int(os.getenv("SEED_VISITOR_COUNT", "1000"))
+    existing = db.query(VisitorRequest).count()
+    if existing >= target:
         return
 
-    request = VisitorRequest(
-        request_number=f"VR{datetime.utcnow().year}000001",
-        visitor_name="Aarav Mehta",
-        visitor_company="Mehta Consultants",
-        visitor_phone="9876543210",
-        visitor_email="aarav.mehta@example.com",
-        visitor_type="consultant",
-        sponsor_employee_id="EMP0001",
-        sponsor_name="Admin User",
-        sponsor_department="Operations",
-        purpose_of_visit="Safety audit and compliance review",
-        visit_date=datetime.utcnow() + timedelta(days=2),
-        expected_duration=4,
-        areas_to_visit="Main Plant, Control Room",
-        safety_required=True,
-        medical_required=False,
-        status=RequestStatus.SUBMITTED,
-    )
+    base_index = existing + 1
+    now = datetime.utcnow()
+    visitor_types = [
+        RequestStatus.SUBMITTED,
+        RequestStatus.TRAINING_PENDING,
+        RequestStatus.PENDING_APPROVAL,
+        RequestStatus.APPROVED,
+    ]
+    type_cycle = ["contractor", "vendor", "consultant", "guest", "official"]
 
-    db.add(request)
+    records = []
+    for i in range(base_index, target + 1):
+        records.append(
+            VisitorRequest(
+                request_number=f"VR{now.year}{i:06d}",
+                visitor_name=f"Visitor {i}",
+                visitor_company="Acme Partners",
+                visitor_phone=f"98{(i % 100000000):08d}",
+                visitor_email=f"visitor{i}@example.com",
+                visitor_type=type_cycle[i % len(type_cycle)],
+                sponsor_employee_id="EMP0001",
+                sponsor_name="Admin User",
+                sponsor_department="Operations",
+                purpose_of_visit="Routine plant visit",
+                visit_date=now + timedelta(days=(i % 30)),
+                expected_duration=2 + (i % 6),
+                areas_to_visit="Main Plant",
+                safety_required=True,
+                medical_required=False,
+                status=visitor_types[i % len(visitor_types)],
+            )
+        )
+
+    db.add_all(records)
     db.commit()
 
 
