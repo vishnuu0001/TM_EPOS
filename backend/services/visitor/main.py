@@ -7,6 +7,7 @@ import sys
 import qrcode
 import io
 import base64
+import os
 sys.path.append('../..')
 
 from shared.database import get_db, init_db
@@ -47,6 +48,44 @@ setup_exception_handlers(app)
 async def startup_event():
     """Initialize database on startup"""
     init_db()
+    if _should_seed():
+        db = next(get_db())
+        try:
+            _seed_visitor_data(db)
+        finally:
+            db.close()
+
+
+def _should_seed() -> bool:
+    return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _seed_visitor_data(db: Session) -> None:
+    """Seed visitor requests when empty."""
+    if db.query(VisitorRequest).count() > 0:
+        return
+
+    request = VisitorRequest(
+        request_number=f"VR{datetime.utcnow().year}000001",
+        visitor_name="Aarav Mehta",
+        visitor_company="Mehta Consultants",
+        visitor_phone="9876543210",
+        visitor_email="aarav.mehta@example.com",
+        visitor_type="consultant",
+        sponsor_employee_id="EMP0001",
+        sponsor_name="Admin User",
+        sponsor_department="Operations",
+        purpose_of_visit="Safety audit and compliance review",
+        visit_date=datetime.utcnow() + timedelta(days=2),
+        expected_duration=4,
+        areas_to_visit="Main Plant, Control Room",
+        safety_required=True,
+        medical_required=False,
+        status=RequestStatus.SUBMITTED,
+    )
+
+    db.add(request)
+    db.commit()
 
 
 @app.get("/")

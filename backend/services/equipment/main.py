@@ -4,6 +4,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 import sys
 from pathlib import Path
+import os
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -12,7 +13,7 @@ from shared.middleware import setup_middleware
 from shared.auth import get_current_user
 from shared.models import User
 
-from models import Base, Equipment, OperatorCertification, EquipmentBooking, UsageLog, MaintenanceSchedule, SafetyPermit, EquipmentStatus, BookingStatus
+from models import Base, Equipment, OperatorCertification, EquipmentBooking, UsageLog, MaintenanceSchedule, SafetyPermit, EquipmentStatus, BookingStatus, EquipmentType
 from schemas import (
     EquipmentCreate, EquipmentUpdate, EquipmentResponse,
     CertificationCreate, CertificationResponse,
@@ -27,6 +28,72 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Equipment Management Service", version="1.0.0")
 setup_middleware(app)
+
+
+def _should_seed() -> bool:
+    return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _seed_equipment_data(db: Session) -> None:
+    """Seed equipment catalog when empty."""
+    if db.query(Equipment).count() > 0:
+        return
+
+    items = [
+        {
+            "equipment_number": "EQ-1001",
+            "name": "Mobile Crane",
+            "equipment_type": EquipmentType.CRANE,
+            "manufacturer": "Tata",
+            "model": "XCMG 25T",
+            "capacity": "25T",
+            "location": "Plant Yard",
+            "status": EquipmentStatus.AVAILABLE,
+            "hourly_rate": 1200,
+            "requires_certification": True,
+            "description": "Mobile crane for heavy lifts",
+        },
+        {
+            "equipment_number": "EQ-1002",
+            "name": "Forklift",
+            "equipment_type": EquipmentType.FORKLIFT,
+            "manufacturer": "Godrej",
+            "model": "GX 5",
+            "capacity": "5T",
+            "location": "Warehouse",
+            "status": EquipmentStatus.AVAILABLE,
+            "hourly_rate": 600,
+            "requires_certification": True,
+            "description": "Warehouse forklift",
+        },
+        {
+            "equipment_number": "EQ-1003",
+            "name": "Diesel Generator",
+            "equipment_type": EquipmentType.GENERATOR,
+            "manufacturer": "Kirloskar",
+            "model": "DG 125",
+            "capacity": "125 kVA",
+            "location": "Power House",
+            "status": EquipmentStatus.MAINTENANCE,
+            "hourly_rate": 800,
+            "requires_certification": False,
+            "description": "Backup generator",
+        },
+    ]
+
+    for item in items:
+        db.add(Equipment(**item))
+    db.commit()
+
+
+@app.on_event("startup")
+async def startup_event():
+    if _should_seed():
+        db = next(get_db())
+        try:
+            _seed_equipment_data(db)
+        finally:
+            db.close()
 
 @app.get("/")
 async def root():

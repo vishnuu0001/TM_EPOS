@@ -4,6 +4,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 import sys
 from pathlib import Path
+import os
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -12,7 +13,7 @@ from shared.middleware import setup_middleware
 from shared.auth import get_current_user
 from shared.models import User
 
-from models import Base, Room, Booking, Billing, Housekeeping, RoomStatus, BookingStatus
+from models import Base, Room, Booking, Billing, Housekeeping, RoomStatus, BookingStatus, RoomType
 from schemas import (
     RoomCreate, RoomUpdate, RoomResponse,
     BookingCreate, BookingUpdate, BookingResponse,
@@ -27,6 +28,63 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Guest House Management Service", version="1.0.0")
 setup_middleware(app)
+
+
+def _should_seed() -> bool:
+    return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _seed_guesthouse_data(db: Session) -> None:
+    """Seed guesthouse rooms if empty."""
+    if db.query(Room).count() > 0:
+        return
+
+    rooms = [
+        {
+            "room_number": "101",
+            "room_type": RoomType.SINGLE,
+            "floor": 1,
+            "capacity": 1,
+            "amenities": "[\"AC\", \"WiFi\", \"TV\"]",
+            "rate_per_night": 1500,
+            "status": RoomStatus.AVAILABLE,
+            "description": "Single room with AC",
+        },
+        {
+            "room_number": "102",
+            "room_type": RoomType.DOUBLE,
+            "floor": 1,
+            "capacity": 2,
+            "amenities": "[\"AC\", \"WiFi\"]",
+            "rate_per_night": 2000,
+            "status": RoomStatus.AVAILABLE,
+            "description": "Double room",
+        },
+        {
+            "room_number": "201",
+            "room_type": RoomType.SUITE,
+            "floor": 2,
+            "capacity": 4,
+            "amenities": "[\"AC\", \"WiFi\", \"TV\", \"MiniBar\"]",
+            "rate_per_night": 3500,
+            "status": RoomStatus.MAINTENANCE,
+            "description": "Suite under maintenance",
+        },
+    ]
+
+    for item in rooms:
+        db.add(Room(**item))
+    db.commit()
+
+
+@app.on_event("startup")
+async def startup_event():
+    if _should_seed():
+        db = next(get_db())
+        try:
+            _seed_guesthouse_data(db)
+        finally:
+            db.close()
 
 @app.get("/")
 async def root():

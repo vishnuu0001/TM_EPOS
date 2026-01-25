@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
+import os
 sys.path.append('../..')
 
 from shared.database import get_db, init_db
@@ -44,6 +45,131 @@ setup_exception_handlers(app)
 async def startup_event():
     """Initialize database on startup"""
     init_db()
+    if _should_seed():
+        db = next(get_db())
+        try:
+            _seed_colony_data(db)
+        finally:
+            db.close()
+
+
+def _should_seed() -> bool:
+    return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _seed_colony_data(db: Session) -> None:
+    """Seed colony reference data when empty."""
+    # Categories
+    if db.query(ServiceCategory).count() == 0:
+        categories = [
+            {"name": "Electrical", "description": "Wiring, lights, power issues", "sla_hours": 24, "icon": "bolt"},
+            {"name": "Plumbing", "description": "Pipes, leaks, faucets", "sla_hours": 24, "icon": "faucet"},
+            {"name": "HVAC", "description": "AC and ventilation", "sla_hours": 48, "icon": "snowflake"},
+        ]
+        for item in categories:
+            db.add(ServiceCategory(**item))
+        db.commit()
+
+    category_ids = [c.id for c in db.query(ServiceCategory).all()]
+
+    # Vendors
+    if db.query(Vendor).count() == 0:
+        vendors = [
+            {
+                "name": "Ravi Singh",
+                "company_name": "Ravi Electricals",
+                "email": "ravi.electricals@example.com",
+                "phone": "9876543210",
+                "service_categories": ",".join(category_ids[:2]) if category_ids else "",
+                "rating": 4.3,
+                "total_jobs": 12,
+            },
+            {
+                "name": "Priya Sharma",
+                "company_name": "Sharma Plumbing Co.",
+                "email": "priya.plumbing@example.com",
+                "phone": "9876543211",
+                "service_categories": ",".join(category_ids[1:]) if category_ids else "",
+                "rating": 4.1,
+                "total_jobs": 8,
+            },
+        ]
+        for item in vendors:
+            db.add(Vendor(**item))
+        db.commit()
+
+    vendor = db.query(Vendor).first()
+
+    # Assets
+    if db.query(Asset).count() == 0:
+        assets = [
+            {
+                "asset_number": "AC-1001",
+                "asset_type": "AC",
+                "quarter_number": "A-101",
+                "make": "LG",
+                "model": "DualCool",
+                "serial_number": "LGAC-001",
+                "installation_date": datetime.utcnow() - timedelta(days=365),
+                "warranty_expiry": datetime.utcnow() + timedelta(days=365),
+                "status": "active",
+            },
+            {
+                "asset_number": "GY-2001",
+                "asset_type": "Geyser",
+                "quarter_number": "B-202",
+                "make": "Havells",
+                "model": "Calisto",
+                "serial_number": "HVGY-002",
+                "installation_date": datetime.utcnow() - timedelta(days=200),
+                "warranty_expiry": datetime.utcnow() + timedelta(days=165),
+                "status": "active",
+            },
+        ]
+        for item in assets:
+            db.add(Asset(**item))
+        db.commit()
+
+    # Technicians
+    if db.query(Technician).count() == 0:
+        technicians = [
+            {
+                "name": "Amit Kumar",
+                "phone": "9876543212",
+                "email": "amit.tech@example.com",
+                "specialization": "Electrical",
+                "vendor_id": vendor.id if vendor else None,
+                "rating": 4.2,
+            },
+            {
+                "name": "Sana Ali",
+                "phone": "9876543213",
+                "email": "sana.tech@example.com",
+                "specialization": "Plumbing",
+                "vendor_id": vendor.id if vendor else None,
+                "rating": 4.0,
+            },
+        ]
+        for item in technicians:
+            db.add(Technician(**item))
+        db.commit()
+
+    # Recurring Maintenance
+    if db.query(RecurringMaintenance).count() == 0:
+        recurring = [
+            {
+                "name": "Quarterly AC Service",
+                "description": "Filter cleaning and gas check",
+                "category": "HVAC",
+                "frequency": "quarterly",
+                "next_schedule_date": datetime.utcnow() + timedelta(days=30),
+                "assigned_vendor_id": vendor.id if vendor else None,
+                "is_active": True,
+            }
+        ]
+        for item in recurring:
+            db.add(RecurringMaintenance(**item))
+        db.commit()
 
 
 def _log_status_change(db: Session, request_id: str, status: RequestStatus, user_id: Optional[str], notes: Optional[str] = None):

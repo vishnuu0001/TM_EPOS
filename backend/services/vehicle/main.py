@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 from pathlib import Path
+import os
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -12,7 +13,7 @@ from shared.middleware import setup_middleware
 from shared.auth import get_current_user
 from shared.models import User
 
-from models import Base, Vehicle, Driver, VehicleRequisition, Trip, FuelLog, TripFeedback, RequisitionStatus, TripStatus, VehicleStatus
+from models import Base, Vehicle, Driver, VehicleRequisition, Trip, FuelLog, TripFeedback, RequisitionStatus, TripStatus, VehicleStatus, VehicleType
 from schemas import (
     VehicleCreate, VehicleResponse,
     DriverCreate, DriverResponse,
@@ -27,6 +28,86 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Vehicle Requisition Service", version="1.0.0")
 setup_middleware(app)
+
+
+def _should_seed() -> bool:
+    return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _seed_vehicle_data(db: Session) -> None:
+    """Seed vehicles and drivers when empty."""
+    if db.query(Vehicle).count() == 0:
+        vehicles = [
+            {
+                "registration_number": "DL01AB1234",
+                "vehicle_type": VehicleType.CAR,
+                "make": "Maruti",
+                "model": "Swift",
+                "year": 2020,
+                "capacity": 4,
+                "fuel_type": "Petrol",
+                "status": VehicleStatus.AVAILABLE,
+                "current_odometer": 15000,
+            },
+            {
+                "registration_number": "DL01CD5678",
+                "vehicle_type": VehicleType.CAR,
+                "make": "Mahindra",
+                "model": "Scorpio",
+                "year": 2021,
+                "capacity": 7,
+                "fuel_type": "Diesel",
+                "status": VehicleStatus.AVAILABLE,
+                "current_odometer": 25000,
+            },
+            {
+                "registration_number": "DL01EF9012",
+                "vehicle_type": VehicleType.BUS,
+                "make": "Tata",
+                "model": "LP 410",
+                "year": 2019,
+                "capacity": 30,
+                "fuel_type": "Diesel",
+                "status": VehicleStatus.IN_USE,
+                "current_odometer": 50000,
+            },
+        ]
+        for item in vehicles:
+            db.add(Vehicle(**item))
+        db.commit()
+
+    if db.query(Driver).count() == 0:
+        drivers = [
+            {
+                "user_id": "00000000-0000-0000-0000-000000000001",
+                "license_number": "DL123456",
+                "license_expiry": datetime.utcnow() + timedelta(days=365),
+                "license_type": "Light Motor Vehicle",
+                "is_active": True,
+                "rating": 4.2,
+            },
+            {
+                "user_id": "00000000-0000-0000-0000-000000000002",
+                "license_number": "DL789012",
+                "license_expiry": datetime.utcnow() + timedelta(days=365),
+                "license_type": "Heavy Motor Vehicle",
+                "is_active": True,
+                "rating": 4.0,
+            },
+        ]
+        for item in drivers:
+            db.add(Driver(**item))
+        db.commit()
+
+
+@app.on_event("startup")
+async def startup_event():
+    if _should_seed():
+        db = next(get_db())
+        try:
+            _seed_vehicle_data(db)
+        finally:
+            db.close()
 
 @app.get("/")
 async def root():

@@ -7,6 +7,7 @@ import sys
 import qrcode
 import io
 import base64
+import os
 sys.path.append('../..')
 
 from shared.database import get_db, init_db
@@ -45,6 +46,53 @@ setup_exception_handlers(app)
 async def startup_event():
     """Initialize database on startup"""
     init_db()
+    if _should_seed():
+        db = next(get_db())
+        try:
+            _seed_vigilance_data(db)
+        finally:
+            db.close()
+
+
+def _should_seed() -> bool:
+    return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _seed_vigilance_data(db: Session) -> None:
+    """Seed checkpoints when empty."""
+    if db.query(Checkpoint).count() > 0:
+        return
+
+    checkpoints = [
+        {
+            "checkpoint_number": "CP0001",
+            "checkpoint_name": "Main Gate",
+            "location_description": "Primary entry gate",
+            "sector": "A",
+            "building": "Gatehouse",
+            "floor": "Ground",
+            "is_active": True,
+            "is_critical": True,
+            "expected_scan_interval": 30,
+            "patrol_sequence": 1,
+        },
+        {
+            "checkpoint_number": "CP0002",
+            "checkpoint_name": "Warehouse",
+            "location_description": "Warehouse loading bay",
+            "sector": "B",
+            "building": "Warehouse",
+            "floor": "Ground",
+            "is_active": True,
+            "is_critical": False,
+            "expected_scan_interval": 45,
+            "patrol_sequence": 2,
+        },
+    ]
+
+    for item in checkpoints:
+        db.add(Checkpoint(**item))
+    db.commit()
 
 
 @app.get("/")
