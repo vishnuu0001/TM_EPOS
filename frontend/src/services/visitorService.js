@@ -84,7 +84,18 @@ const visitorService = {
   // Dashboard
   getDashboardStats: async () => {
     const response = await api.get('/api/visitor/dashboard/stats')
-    return response.data
+    const data = response.data || {}
+
+    return {
+      total_requests: data.total_requests || 0,
+      pending_requests: data.pending_requests ?? data.pending_approvals ?? 0,
+      approved_requests: data.approved_requests || 0,
+      active_visitors: data.active_visitors ?? data.visitors_onsite ?? 0,
+      training_pending: data.training_pending || 0,
+      medical_pending: data.medical_pending || 0,
+      visitors_today: data.visitors_today ?? data.today_entries ?? 0,
+      visitors_onsite: data.visitors_onsite ?? data.active_visitors ?? 0,
+    }
   },
 
   // Active Visitors

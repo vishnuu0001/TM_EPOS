@@ -73,6 +73,14 @@ export interface DashboardStats {
   visitors_onsite: number;
 }
 
+type RawDashboardStats = Partial<DashboardStats> & {
+  pending_approvals?: number;
+  today_entries?: number;
+  today_exits?: number;
+  completed_visits?: number;
+  gate_passes_issued?: number;
+};
+
 const visitorService = {
   // Visitor Requests
   getRequests: async (status?: string): Promise<VisitorRequest[]> => {
@@ -157,7 +165,18 @@ const visitorService = {
   // Dashboard
   getDashboardStats: async (): Promise<DashboardStats> => {
     const response = await api.get('/api/visitor/dashboard/stats');
-    return response.data;
+    const data: RawDashboardStats = response.data || {};
+
+    return {
+      total_requests: data.total_requests ?? 0,
+      pending_requests: data.pending_requests ?? data.pending_approvals ?? 0,
+      approved_requests: data.approved_requests ?? 0,
+      active_visitors: data.active_visitors ?? data.visitors_onsite ?? 0,
+      training_pending: data.training_pending ?? 0,
+      medical_pending: data.medical_pending ?? 0,
+      visitors_today: data.visitors_today ?? data.today_entries ?? 0,
+      visitors_onsite: data.visitors_onsite ?? data.active_visitors ?? 0,
+    };
   },
 
   // Active Visitors
