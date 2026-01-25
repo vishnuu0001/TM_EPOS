@@ -701,6 +701,19 @@ async def get_dashboard_stats(
             RequestStatus.TRAINING_COMPLETED
         ])
     ).count()
+
+    pending_requests = db.query(VisitorRequest).filter(
+        VisitorRequest.status.in_([
+            RequestStatus.SUBMITTED,
+            RequestStatus.PENDING_APPROVAL,
+            RequestStatus.MEDICAL_UPLOADED,
+            RequestStatus.TRAINING_COMPLETED
+        ])
+    ).count()
+
+    approved_requests = db.query(VisitorRequest).filter(
+        VisitorRequest.status == RequestStatus.APPROVED
+    ).count()
     
     completed_visits = db.query(VisitorRequest).filter(
         VisitorRequest.status == RequestStatus.GATE_PASS_ISSUED
@@ -752,15 +765,23 @@ async def get_dashboard_stats(
             func.date(EntryExit.timestamp) == today
         )
     ).count()
+
+    visitors_today = db.query(VisitorRequest).filter(
+        func.date(VisitorRequest.visit_date) == today
+    ).count()
     
     return DashboardStats(
         total_requests=total_requests,
+        pending_requests=pending_requests,
+        approved_requests=approved_requests,
         pending_approvals=pending_approvals,
         active_visitors=active_count,
         completed_visits=completed_visits,
         training_pending=training_pending,
         medical_pending=medical_pending,
         gate_passes_issued=gate_passes_issued,
+        visitors_today=visitors_today,
+        visitors_onsite=active_count,
         today_entries=today_entries,
         today_exits=today_exits
     )

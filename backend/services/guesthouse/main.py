@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 from datetime import datetime, timedelta
 import sys
@@ -503,6 +504,14 @@ async def get_dashboard_stats(
         active_bookings = db.query(Booking).filter(
             Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN])
         ).count()
+
+        pending_bookings = db.query(Booking).filter(
+            Booking.status == BookingStatus.PENDING
+        ).count()
+
+        checked_in_guests = db.query(Booking).filter(
+            Booking.status == BookingStatus.CHECKED_IN
+        ).count()
         
         today = datetime.now().date()
         checked_in_today = db.query(Booking).filter(
@@ -521,6 +530,21 @@ async def get_dashboard_stats(
         pending_housekeeping = db.query(Housekeeping).filter(
             Housekeeping.status == "pending"
         ).count()
+
+        start_of_month = datetime(today.year, today.month, 1)
+        if today.month == 12:
+            start_of_next_month = datetime(today.year + 1, 1, 1)
+        else:
+            start_of_next_month = datetime(today.year, today.month + 1, 1)
+
+        revenue_today = db.query(func.sum(Billing.total_amount)).filter(
+            func.date(Billing.created_at) == today
+        ).scalar() or 0
+
+        revenue_month = db.query(func.sum(Billing.total_amount)).filter(
+            Billing.created_at >= start_of_month,
+            Billing.created_at < start_of_next_month
+        ).scalar() or 0
         
         return {
             "total_rooms": total_rooms,
@@ -529,10 +553,14 @@ async def get_dashboard_stats(
             "maintenance_rooms": maintenance_rooms,
             "total_bookings": total_bookings,
             "active_bookings": active_bookings,
+            "pending_bookings": pending_bookings,
+            "checked_in_guests": checked_in_guests,
             "checked_in_today": checked_in_today,
             "checking_out_today": checking_out_today,
             "occupancy_rate": round(occupancy_rate, 2),
-            "pending_housekeeping": pending_housekeeping
+            "pending_housekeeping": pending_housekeeping,
+            "revenue_today": round(revenue_today, 2),
+            "revenue_month": round(revenue_month, 2)
         }
     except Exception as e:
         print(f"Error fetching dashboard stats: {str(e)}")

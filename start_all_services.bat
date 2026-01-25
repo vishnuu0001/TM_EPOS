@@ -1,6 +1,10 @@
 @echo off
 echo Starting all backend services...
 
+if "%SECRET_KEY%"=="" (
+	set "SECRET_KEY=9xp5cNa3iTm2NgX/mmFcHeK3yXjRVhpDfyiR+SslNPM="
+)
+
 cd /d "%~dp0backend"
 
 echo Starting API Gateway on port 8000...

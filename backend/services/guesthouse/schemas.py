@@ -172,10 +172,14 @@ class DashboardStats(BaseModel):
     maintenance_rooms: int
     total_bookings: int
     active_bookings: int
+    pending_bookings: int
+    checked_in_guests: int
     checked_in_today: int
     checking_out_today: int
     occupancy_rate: float
     pending_housekeeping: int
+    revenue_today: float
+    revenue_month: float
 
 # Availability Response
 class AvailabilityResponse(BaseModel):

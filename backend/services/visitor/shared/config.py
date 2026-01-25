@@ -11,6 +11,11 @@ DATA_DIR = BACKEND_DIR / "data"
 _IS_VERCEL = bool(os.getenv("VERCEL")) or bool(os.getenv("VERCEL_ENV"))
 _DEFAULT_DB_URL = "sqlite:////tmp/epos.db" if _IS_VERCEL else f"sqlite:///{DATA_DIR}/epos.db"
 
+# Enforce the required SECRET_KEY across environments
+_REQUIRED_SECRET_KEY = "9xp5cNa3iTm2NgX/mmFcHeK3yXjRVhpDfyiR+SslNPM="
+if os.getenv("SECRET_KEY") != _REQUIRED_SECRET_KEY:
+    os.environ["SECRET_KEY"] = _REQUIRED_SECRET_KEY
+
 class Settings(BaseSettings):
     # Application
     APP_NAME: str = "ePOS"
@@ -24,7 +29,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     
     # Security
-    SECRET_KEY: str = "9xp5cNa3iTm2NgX/mmFcHeK3yXjRVhpDfyiR+SslNPM="
+    SECRET_KEY: str = _REQUIRED_SECRET_KEY
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7

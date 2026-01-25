@@ -6,6 +6,10 @@ echo "  Enterprise Plant Operations System"
 echo "================================================"
 echo ""
 
+if [ -z "$SECRET_KEY" ]; then
+    export SECRET_KEY="9xp5cNa3iTm2NgX/mmFcHeK3yXjRVhpDfyiR+SslNPM="
+fi
+
 show_menu() {
     echo "Please select an option:"
     echo ""

@@ -167,8 +167,13 @@ class DashboardStats(BaseModel):
     total_vehicles: int
     available_vehicles: int
     in_use_vehicles: int
+    maintenance_vehicles: int
     total_requisitions: int
     pending_approvals: int
+    pending_requisitions: int
+    approved_requisitions: int
     active_trips: int
     total_distance_km: float
+    total_km_today: float
+    fuel_cost_today: float
     avg_driver_rating: float

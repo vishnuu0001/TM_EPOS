@@ -101,9 +101,20 @@ async def login(
 
 
 @app.get("/api/auth/me", response_model=UserResponse)
-async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+async def get_current_user_info(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Get current user information"""
-    return current_user
+    user_id = current_user.get("id")
+    user = None
+    if user_id:
+        user = db.query(User).filter(User.id == user_id).first()
+    if not user and current_user.get("email"):
+        user = db.query(User).filter(User.email == current_user["email"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 

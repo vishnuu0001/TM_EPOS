@@ -294,12 +294,16 @@ class EntryExitResponse(BaseModel):
 # Dashboard Stats
 class DashboardStats(BaseModel):
     total_requests: int
+    pending_requests: int
+    approved_requests: int
     pending_approvals: int
     active_visitors: int
     completed_visits: int
     training_pending: int
     medical_pending: int
     gate_passes_issued: int
+    visitors_today: int
+    visitors_onsite: int
     today_entries: int
     today_exits: int
     

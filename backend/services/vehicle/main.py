@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Optional
 from datetime import datetime, timedelta
 import sys
@@ -284,12 +285,25 @@ async def get_dashboard_stats(db: Session = Depends(get_db), current_user: User 
     total_vehicles = db.query(Vehicle).count()
     available_vehicles = db.query(Vehicle).filter(Vehicle.status == VehicleStatus.AVAILABLE).count()
     in_use_vehicles = db.query(Vehicle).filter(Vehicle.status == VehicleStatus.IN_USE).count()
+    maintenance_vehicles = db.query(Vehicle).filter(Vehicle.status == VehicleStatus.MAINTENANCE).count()
     total_requisitions = db.query(VehicleRequisition).count()
     pending_approvals = db.query(VehicleRequisition).filter(VehicleRequisition.status == RequisitionStatus.REQUESTED).count()
+    pending_requisitions = db.query(VehicleRequisition).filter(VehicleRequisition.status == RequisitionStatus.REQUESTED).count()
+    approved_requisitions = db.query(VehicleRequisition).filter(VehicleRequisition.status == RequisitionStatus.APPROVED).count()
     active_trips = db.query(Trip).filter(Trip.status == TripStatus.IN_PROGRESS).count()
     
     total_distance = db.query(Trip).filter(Trip.distance_km.isnot(None))
     total_distance_km = sum([t.distance_km for t in total_distance.all()])
+
+    today = datetime.utcnow().date()
+    total_km_today = db.query(func.sum(Trip.distance_km)).filter(
+        Trip.distance_km.isnot(None),
+        func.date(Trip.start_time) == today
+    ).scalar() or 0
+
+    fuel_cost_today = db.query(func.sum(FuelLog.fuel_cost)).filter(
+        func.date(FuelLog.filled_at) == today
+    ).scalar() or 0
     
     drivers = db.query(Driver).filter(Driver.rating > 0).all()
     avg_driver_rating = sum([d.rating for d in drivers]) / len(drivers) if drivers else 0
@@ -298,10 +312,15 @@ async def get_dashboard_stats(db: Session = Depends(get_db), current_user: User 
         "total_vehicles": total_vehicles,
         "available_vehicles": available_vehicles,
         "in_use_vehicles": in_use_vehicles,
+        "maintenance_vehicles": maintenance_vehicles,
         "total_requisitions": total_requisitions,
         "pending_approvals": pending_approvals,
+        "pending_requisitions": pending_requisitions,
+        "approved_requisitions": approved_requisitions,
         "active_trips": active_trips,
         "total_distance_km": round(total_distance_km, 2),
+        "total_km_today": round(total_km_today, 2),
+        "fuel_cost_today": round(fuel_cost_today, 2),
         "avg_driver_rating": round(avg_driver_rating, 2)
     }
 
