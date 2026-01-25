@@ -221,8 +221,6 @@ async def proxy_request(request: Request, service_url: str, path: str):
 async def colony_proxy(request: Request, path: str, current_user: dict = Depends(get_current_user)):
     """Proxy to Colony Maintenance Service"""
     base = settings.COLONY_SERVICE_URL.rstrip("/")
-    if "/api/colony" not in base:
-        base = f"{base}/api/colony"
     return await proxy_request(request, base, f"/{path}")
 
 
