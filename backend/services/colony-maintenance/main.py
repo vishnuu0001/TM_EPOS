@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Query, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -57,6 +57,15 @@ async def startup_event():
 
 def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _require_seed_token(request: Request) -> None:
+    token = os.getenv("SEED_ENDPOINT_TOKEN")
+    if not token:
+        raise HTTPException(status_code=403, detail="Seed endpoint disabled")
+    provided = request.headers.get("x-seed-token") or request.query_params.get("token")
+    if provided != token:
+        raise HTTPException(status_code=401, detail="Invalid seed token")
 
 
 def _should_seed_first_boot(service_name: str) -> bool:
@@ -236,6 +245,17 @@ def _log_status_change(db: Session, request_id: str, status: RequestStatus, user
 @app.get("/")
 async def root():
     return {"service": "Colony Maintenance Management", "status": "running"}
+
+
+@app.post("/admin/seed")
+async def seed_colony_data(request: Request, current_user: dict = Depends(get_current_user)):
+    _require_seed_token(request)
+    db = next(get_db())
+    try:
+        _seed_colony_data(db)
+        return {"seeded": True}
+    finally:
+        db.close()
 
 
 # Maintenance Request Endpoints
