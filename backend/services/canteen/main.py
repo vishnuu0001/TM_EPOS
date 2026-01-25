@@ -4,6 +4,7 @@ from sqlalchemy import func, and_, or_
 from typing import List, Optional
 from datetime import datetime, date, timedelta
 import sys
+import os
 sys.path.append('../..')
 
 from shared.database import get_db, init_db
@@ -38,10 +39,139 @@ app = FastAPI(
 setup_middleware(app)
 
 
+def _should_seed() -> bool:
+    """Check env flag for seed behavior."""
+    return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
+
+
+def _seed_canteen_data(db: Session) -> None:
+    """Seed canteen data if empty (menus/workers/menu items)."""
+    has_menus = db.query(Menu).count() > 0
+    has_items = db.query(MenuItem).count() > 0
+    has_workers = db.query(Worker).count() > 0
+
+    if has_menus and has_items and has_workers:
+        return
+
+    # Workers
+    if not has_workers:
+        workers = [
+            {
+                "worker_number": "W202600001",
+                "full_name": "Mohan Kumar",
+                "employee_id": "EMP001",
+                "worker_type": WorkerType.PERMANENT,
+                "department": "Production",
+                "is_active": True,
+                "canteen_access": True,
+                "wallet_balance": 500,
+            },
+            {
+                "worker_number": "W202600002",
+                "full_name": "Ramesh Singh",
+                "employee_id": "EMP002",
+                "worker_type": WorkerType.CONTRACT,
+                "department": "Maintenance",
+                "is_active": True,
+                "canteen_access": True,
+                "wallet_balance": 300,
+            },
+        ]
+        for worker_data in workers:
+            db.add(Worker(**worker_data))
+
+    # Menus
+    if not has_menus:
+        today = date.today()
+        menus = [
+            {
+                "menu_date": today,
+                "meal_type": MealType.BREAKFAST,
+                "menu_name": "Breakfast Menu",
+                "is_active": True,
+                "is_published": True,
+            },
+            {
+                "menu_date": today,
+                "meal_type": MealType.LUNCH,
+                "menu_name": "Lunch Menu",
+                "is_active": True,
+                "is_published": True,
+            },
+            {
+                "menu_date": today,
+                "meal_type": MealType.DINNER,
+                "menu_name": "Dinner Menu",
+                "is_active": True,
+                "is_published": True,
+            },
+        ]
+        for menu_data in menus:
+            db.add(Menu(**menu_data))
+
+    db.commit()
+
+    # Menu items (after menus exist)
+    if not has_items:
+        menu_objs = db.query(Menu).order_by(Menu.menu_date.desc()).all()
+        if menu_objs:
+            items = [
+                {
+                    "menu_id": menu_objs[0].id,
+                    "item_name": "Poha",
+                    "category": "Main",
+                    "base_price": 30,
+                    "subsidized_price": 10,
+                    "is_available": True,
+                    "quantity_prepared": 50,
+                    "quantity_remaining": 50,
+                },
+                {
+                    "menu_id": menu_objs[1].id if len(menu_objs) > 1 else menu_objs[0].id,
+                    "item_name": "Dal Tadka",
+                    "category": "Dal",
+                    "base_price": 40,
+                    "subsidized_price": 15,
+                    "is_available": True,
+                    "quantity_prepared": 100,
+                    "quantity_remaining": 100,
+                },
+                {
+                    "menu_id": menu_objs[1].id if len(menu_objs) > 1 else menu_objs[0].id,
+                    "item_name": "Roti",
+                    "category": "Roti",
+                    "base_price": 10,
+                    "subsidized_price": 5,
+                    "is_available": True,
+                    "quantity_prepared": 200,
+                    "quantity_remaining": 200,
+                },
+                {
+                    "menu_id": menu_objs[2].id if len(menu_objs) > 2 else menu_objs[-1].id,
+                    "item_name": "Rice",
+                    "category": "Rice",
+                    "base_price": 30,
+                    "subsidized_price": 10,
+                    "is_available": True,
+                    "quantity_prepared": 80,
+                    "quantity_remaining": 80,
+                },
+            ]
+            for item_data in items:
+                db.add(MenuItem(**item_data))
+            db.commit()
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup"""
     init_db()
+    if _should_seed():
+        db = next(get_db())
+        try:
+            _seed_canteen_data(db)
+        finally:
+            db.close()
 
 
 @app.get("/")
