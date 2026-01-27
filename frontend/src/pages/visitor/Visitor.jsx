@@ -21,12 +21,17 @@ import {
   CardContent,
   Tab,
   Tabs,
+  TablePagination,
 } from '@mui/material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import visitorService from '../../services/visitorService'
 import { useSelector } from 'react-redux'
 
 export default function Visitor() {
+  const [requestsPage, setRequestsPage] = useState(0)
+  const [requestsRowsPerPage, setRequestsRowsPerPage] = useState(10)
+  const [activePage, setActivePage] = useState(0)
+  const [activeRowsPerPage, setActiveRowsPerPage] = useState(10)
   const [activeTab, setActiveTab] = useState(0)
   const [openDialog, setOpenDialog] = useState(false)
   const [form, setForm] = useState({
@@ -175,97 +180,129 @@ export default function Visitor() {
       </Tabs>
 
       {activeTab === 0 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Request #</TableCell>
-                <TableCell>Visitor Name</TableCell>
-                <TableCell>Company</TableCell>
-                <TableCell>Purpose</TableCell>
-                <TableCell>Visit Date</TableCell>
-                <TableCell>Training</TableCell>
-                <TableCell>Medical</TableCell>
-                <TableCell>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {requests.length === 0 ? (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">No visitor requests found. Use New Request to create one.</Typography>
-                  </TableCell>
+                  <TableCell>Request #</TableCell>
+                  <TableCell>Visitor Name</TableCell>
+                  <TableCell>Company</TableCell>
+                  <TableCell>Purpose</TableCell>
+                  <TableCell>Visit Date</TableCell>
+                  <TableCell>Training</TableCell>
+                  <TableCell>Medical</TableCell>
+                  <TableCell>Status</TableCell>
                 </TableRow>
-              ) : (
-                requests.map((req) => (
-                  <TableRow key={req.id}>
-                    <TableCell>{req.request_number}</TableCell>
-                    <TableCell>{req.visitor_name}</TableCell>
-                    <TableCell>{req.visitor_company}</TableCell>
-                    <TableCell>{req.purpose}</TableCell>
-                    <TableCell>{new Date(req.visit_date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={req.training_completed ? 'Done' : 'Pending'}
-                        color={req.training_completed ? 'success' : 'warning'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={req.medical_verified ? 'Verified' : 'Pending'}
-                        color={req.medical_verified ? 'success' : 'warning'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={req.status} color={getStatusColor(req.status)} size="small" />
+              </TableHead>
+              <TableBody>
+                {requests.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">No visitor requests found. Use New Request to create one.</Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  requests
+                    .slice(requestsPage * requestsRowsPerPage, requestsPage * requestsRowsPerPage + requestsRowsPerPage)
+                    .map((req) => (
+                      <TableRow key={req.id}>
+                        <TableCell>{req.request_number}</TableCell>
+                        <TableCell>{req.visitor_name}</TableCell>
+                        <TableCell>{req.visitor_company}</TableCell>
+                        <TableCell>{req.purpose}</TableCell>
+                        <TableCell>{new Date(req.visit_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={req.training_completed ? 'Done' : 'Pending'}
+                            color={req.training_completed ? 'success' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={req.medical_verified ? 'Verified' : 'Pending'}
+                            color={req.medical_verified ? 'success' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Chip label={req.status} color={getStatusColor(req.status)} size="small" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={requests.length}
+            page={requestsPage}
+            onPageChange={(_, page) => setRequestsPage(page)}
+            rowsPerPage={requestsRowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRequestsRowsPerPage(parseInt(e.target.value, 10))
+              setRequestsPage(0)
+            }}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
+        </>
       )}
 
       {activeTab === 1 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Gate Pass #</TableCell>
-                <TableCell>Visitor Name</TableCell>
-                <TableCell>Company</TableCell>
-                <TableCell>Purpose</TableCell>
-                <TableCell>Visit Date</TableCell>
-                <TableCell>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {activeVisitors.length === 0 ? (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">No active visitors found.</Typography>
-                  </TableCell>
+                  <TableCell>Gate Pass #</TableCell>
+                  <TableCell>Visitor Name</TableCell>
+                  <TableCell>Company</TableCell>
+                  <TableCell>Purpose</TableCell>
+                  <TableCell>Visit Date</TableCell>
+                  <TableCell>Status</TableCell>
                 </TableRow>
-              ) : (
-                activeVisitors.map((visitor) => (
-                  <TableRow key={visitor.id}>
-                    <TableCell>{visitor.gate_pass_number}</TableCell>
-                    <TableCell>{visitor.visitor_name}</TableCell>
-                    <TableCell>{visitor.visitor_company}</TableCell>
-                    <TableCell>{visitor.purpose}</TableCell>
-                    <TableCell>{new Date(visitor.visit_date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Chip label={visitor.status} color={getStatusColor(visitor.status)} size="small" />
+              </TableHead>
+              <TableBody>
+                {activeVisitors.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">No active visitors found.</Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  activeVisitors
+                    .slice(activePage * activeRowsPerPage, activePage * activeRowsPerPage + activeRowsPerPage)
+                    .map((visitor) => (
+                      <TableRow key={visitor.id}>
+                        <TableCell>{visitor.gate_pass_number}</TableCell>
+                        <TableCell>{visitor.visitor_name}</TableCell>
+                        <TableCell>{visitor.visitor_company}</TableCell>
+                        <TableCell>{visitor.purpose}</TableCell>
+                        <TableCell>{new Date(visitor.visit_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Chip label={visitor.status} color={getStatusColor(visitor.status)} size="small" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={activeVisitors.length}
+            page={activePage}
+            onPageChange={(_, page) => setActivePage(page)}
+            rowsPerPage={activeRowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setActiveRowsPerPage(parseInt(e.target.value, 10))
+              setActivePage(0)
+            }}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
+        </>
       )}
 
       {/* Create Request Dialog */}

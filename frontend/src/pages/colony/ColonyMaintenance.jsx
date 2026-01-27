@@ -30,6 +30,7 @@ import {
   Drawer,
   FormControlLabel,
   Switch,
+  TablePagination,
 } from '@mui/material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-toastify'
@@ -58,12 +59,31 @@ const statusColors = {
 
 const priorities = ['low', 'medium', 'high', 'urgent']
 const frequencies = ['monthly', 'quarterly', 'annual']
+const subCategoryOptions = {
+  Plumbing: ['Leakage', 'Clogging', 'Fixture Repair', 'Water Pressure', 'Other'],
+  Electrical: ['Power Outage', 'Wiring', 'Lighting', 'Appliance', 'Other'],
+  Carpentry: ['Door/Window', 'Furniture', 'Cabinet', 'Repair', 'Other'],
+  Painting: ['Interior', 'Exterior', 'Touch-up', 'Waterproofing', 'Other'],
+}
 
 const isoDate = (date) => date.toISOString().slice(0, 10)
 
 export default function ColonyMaintenance() {
   const queryClient = useQueryClient()
   const user = useSelector((state) => state.auth.user)
+
+  const [requestsPage, setRequestsPage] = useState(0)
+  const [requestsRowsPerPage, setRequestsRowsPerPage] = useState(10)
+  const [vendorsPage, setVendorsPage] = useState(0)
+  const [vendorsRowsPerPage, setVendorsRowsPerPage] = useState(10)
+  const [techniciansPage, setTechniciansPage] = useState(0)
+  const [techniciansRowsPerPage, setTechniciansRowsPerPage] = useState(10)
+  const [assetsPage, setAssetsPage] = useState(0)
+  const [assetsRowsPerPage, setAssetsRowsPerPage] = useState(10)
+  const [categoriesPage, setCategoriesPage] = useState(0)
+  const [categoriesRowsPerPage, setCategoriesRowsPerPage] = useState(10)
+  const [recurringPage, setRecurringPage] = useState(0)
+  const [recurringRowsPerPage, setRecurringRowsPerPage] = useState(10)
 
   const [activeTab, setActiveTab] = useState(0)
   const [createOpen, setCreateOpen] = useState(false)
@@ -417,7 +437,9 @@ export default function ColonyMaintenance() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  requests.map((req) => (
+                  requests
+                    .slice(requestsPage * requestsRowsPerPage, requestsPage * requestsRowsPerPage + requestsRowsPerPage)
+                    .map((req) => (
                     <TableRow
                       key={req.id}
                       hover
@@ -442,6 +464,18 @@ export default function ColonyMaintenance() {
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            component="div"
+            count={requests.length}
+            page={requestsPage}
+            onPageChange={(_, page) => setRequestsPage(page)}
+            rowsPerPage={requestsRowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRequestsRowsPerPage(parseInt(e.target.value, 10))
+              setRequestsPage(0)
+            }}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
 
           <Drawer
             anchor="right"
@@ -599,7 +633,9 @@ export default function ColonyMaintenance() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {vendors.map((v) => (
+                    {vendors
+                      .slice(vendorsPage * vendorsRowsPerPage, vendorsPage * vendorsRowsPerPage + vendorsRowsPerPage)
+                      .map((v) => (
                       <TableRow key={v.id}>
                         <TableCell>{v.name}</TableCell>
                         <TableCell>{v.phone}</TableCell>
@@ -614,6 +650,18 @@ export default function ColonyMaintenance() {
                     )}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  component="div"
+                  count={vendors.length}
+                  page={vendorsPage}
+                  onPageChange={(_, page) => setVendorsPage(page)}
+                  rowsPerPage={vendorsRowsPerPage}
+                  onRowsPerPageChange={(e) => {
+                    setVendorsRowsPerPage(parseInt(e.target.value, 10))
+                    setVendorsPage(0)
+                  }}
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                />
               </CardContent>
             </Card>
           </Grid>
@@ -653,7 +701,9 @@ export default function ColonyMaintenance() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {technicians.map((t) => (
+                    {technicians
+                      .slice(techniciansPage * techniciansRowsPerPage, techniciansPage * techniciansRowsPerPage + techniciansRowsPerPage)
+                      .map((t) => (
                       <TableRow key={t.id}>
                         <TableCell>{t.name}</TableCell>
                         <TableCell>{t.specialization || '-'}</TableCell>
@@ -668,6 +718,18 @@ export default function ColonyMaintenance() {
                     )}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  component="div"
+                  count={technicians.length}
+                  page={techniciansPage}
+                  onPageChange={(_, page) => setTechniciansPage(page)}
+                  rowsPerPage={techniciansRowsPerPage}
+                  onRowsPerPageChange={(e) => {
+                    setTechniciansRowsPerPage(parseInt(e.target.value, 10))
+                    setTechniciansPage(0)
+                  }}
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                />
               </CardContent>
             </Card>
           </Grid>
@@ -710,7 +772,9 @@ export default function ColonyMaintenance() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {assets.map((a) => (
+                    {assets
+                      .slice(assetsPage * assetsRowsPerPage, assetsPage * assetsRowsPerPage + assetsRowsPerPage)
+                      .map((a) => (
                       <TableRow key={a.id}>
                         <TableCell>{a.asset_number}</TableCell>
                         <TableCell>{a.asset_type}</TableCell>
@@ -724,6 +788,18 @@ export default function ColonyMaintenance() {
                     )}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  component="div"
+                  count={assets.length}
+                  page={assetsPage}
+                  onPageChange={(_, page) => setAssetsPage(page)}
+                  rowsPerPage={assetsRowsPerPage}
+                  onRowsPerPageChange={(e) => {
+                    setAssetsRowsPerPage(parseInt(e.target.value, 10))
+                    setAssetsPage(0)
+                  }}
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                />
               </Grid>
             </Grid>
           </CardContent>
@@ -768,7 +844,9 @@ export default function ColonyMaintenance() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {categories.map((c) => (
+                    {categories
+                      .slice(categoriesPage * categoriesRowsPerPage, categoriesPage * categoriesRowsPerPage + categoriesRowsPerPage)
+                      .map((c) => (
                       <TableRow key={c.id}>
                         <TableCell>{c.name}</TableCell>
                         <TableCell>{c.sla_hours}</TableCell>
@@ -782,6 +860,18 @@ export default function ColonyMaintenance() {
                     )}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  component="div"
+                  count={categories.length}
+                  page={categoriesPage}
+                  onPageChange={(_, page) => setCategoriesPage(page)}
+                  rowsPerPage={categoriesRowsPerPage}
+                  onRowsPerPageChange={(e) => {
+                    setCategoriesRowsPerPage(parseInt(e.target.value, 10))
+                    setCategoriesPage(0)
+                  }}
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                />
               </Grid>
             </Grid>
           </CardContent>
@@ -865,7 +955,9 @@ export default function ColonyMaintenance() {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {recurring.map((r) => (
+                    {recurring
+                      .slice(recurringPage * recurringRowsPerPage, recurringPage * recurringRowsPerPage + recurringRowsPerPage)
+                      .map((r) => (
                       <TableRow key={r.id}>
                         <TableCell>{r.name}</TableCell>
                         <TableCell>{r.category}</TableCell>
@@ -881,6 +973,18 @@ export default function ColonyMaintenance() {
                     )}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  component="div"
+                  count={recurring.length}
+                  page={recurringPage}
+                  onPageChange={(_, page) => setRecurringPage(page)}
+                  rowsPerPage={recurringRowsPerPage}
+                  onRowsPerPageChange={(e) => {
+                    setRecurringRowsPerPage(parseInt(e.target.value, 10))
+                    setRecurringPage(0)
+                  }}
+                  rowsPerPageOptions={[5, 10, 25, 50]}
+                />
               </Grid>
             </Grid>
           </CardContent>
@@ -894,6 +998,8 @@ export default function ColonyMaintenance() {
             <TextField
               label="Quarter Number"
               value={requestForm.quarter_number}
+              placeholder="Examples: Q1-101, A-102"
+              helperText="Enter the quarter/house number (e.g., Q1-101)."
               onChange={(e) => setRequestForm((p) => ({ ...p, quarter_number: e.target.value }))}
             />
             <FormControl fullWidth>
@@ -908,11 +1014,20 @@ export default function ColonyMaintenance() {
                 ))}
               </Select>
             </FormControl>
-            <TextField
-              label="Sub Category"
-              value={requestForm.sub_category}
-              onChange={(e) => setRequestForm((p) => ({ ...p, sub_category: e.target.value }))}
-            />
+            <FormControl fullWidth>
+              <InputLabel>Sub Category</InputLabel>
+              <Select
+                label="Sub Category"
+                value={requestForm.sub_category || ''}
+                onChange={(e) => setRequestForm((p) => ({ ...p, sub_category: e.target.value }))}
+              >
+                {(subCategoryOptions[requestForm.category] || ['Other']).map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <TextField
               label="Description"
               multiline

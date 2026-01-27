@@ -7,11 +7,14 @@ export default function AuthLayout() {
   const isAuthenticated = useSelector(
     (state: RootState) => state.auth.isAuthenticated
   )
+  const token = useSelector((state: RootState) => state.auth.token)
+  const user = useSelector((state: RootState) => state.auth.user)
+  const hasSession = !!token && !!user
   
-  console.log('AuthLayout check - isAuthenticated:', isAuthenticated)
+  console.log('AuthLayout check:', { isAuthenticated, hasSession })
 
   // Redirect to dashboard if already authenticated
-  if (isAuthenticated) {
+  if (isAuthenticated && hasSession) {
     console.log('Already authenticated, redirecting to /dashboard')
     return <Navigate to="/dashboard" replace />
   }

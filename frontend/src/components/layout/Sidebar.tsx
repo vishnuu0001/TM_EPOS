@@ -71,7 +71,7 @@ export default function Sidebar({ drawerWidth, open, onToggle }: SidebarProps) {
               width: 40,
               height: 40,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(135deg, #E2001A 0%, #A30012 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

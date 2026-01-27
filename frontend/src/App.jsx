@@ -22,18 +22,19 @@ const ProtectedRoute = ({ children }) => {
   const token = useSelector((state) => state.auth.token)
   const user = useSelector((state) => state.auth.user)
 
-  console.log('ProtectedRoute check:', {
-    isAuthenticated,
-    hasToken: !!token,
-    hasUser: !!user,
-    tokenInStorage: !!localStorage.getItem('token'),
-    userInStorage: !!localStorage.getItem('user'),
-  })
+    const hasSession = !!token && !!user
 
-  if (!isAuthenticated) {
-    console.log('Not authenticated, redirecting to /login')
-    return <Navigate to="/login" replace />
-  }
+    console.log('ProtectedRoute check:', {
+      isAuthenticated,
+      hasToken: !!token,
+      hasUser: !!user,
+      hasSession,
+    })
+
+    if (!isAuthenticated || !hasSession) {
+      console.log('Not authenticated, redirecting to /login')
+      return <Navigate to="/login" replace />
+    }
 
   return children
 }

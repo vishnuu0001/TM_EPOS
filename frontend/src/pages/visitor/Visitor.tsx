@@ -21,6 +21,7 @@ import {
   CardContent,
   Tab,
   Tabs,
+  TablePagination,
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import visitorService, { type CreateVisitorRequest } from '../../services/visitorService';
@@ -28,6 +29,10 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 
 export default function Visitor() {
+  const [requestsPage, setRequestsPage] = useState(0);
+  const [requestsRowsPerPage, setRequestsRowsPerPage] = useState(10);
+  const [activePage, setActivePage] = useState(0);
+  const [activeRowsPerPage, setActiveRowsPerPage] = useState(10);
   const [activeTab, setActiveTab] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [form, setForm] = useState<CreateVisitorRequest>({
@@ -198,7 +203,9 @@ export default function Visitor() {
                   </TableCell>
                 </TableRow>
               ) : (
-                requests.map((req) => (
+                requests
+                  .slice(requestsPage * requestsRowsPerPage, requestsPage * requestsRowsPerPage + requestsRowsPerPage)
+                  .map((req) => (
                   <TableRow key={req.id}>
                     <TableCell>{req.request_number}</TableCell>
                     <TableCell>{req.visitor_name}</TableCell>
@@ -228,6 +235,18 @@ export default function Visitor() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={requests.length}
+          page={requestsPage}
+          onPageChange={(_, page) => setRequestsPage(page)}
+          rowsPerPage={requestsRowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setRequestsRowsPerPage(parseInt(e.target.value, 10));
+            setRequestsPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
       )}
 
       {activeTab === 1 && (
@@ -251,7 +270,9 @@ export default function Visitor() {
                   </TableCell>
                 </TableRow>
               ) : (
-                activeVisitors.map((visitor: any) => (
+                activeVisitors
+                  .slice(activePage * activeRowsPerPage, activePage * activeRowsPerPage + activeRowsPerPage)
+                  .map((visitor) => (
                   <TableRow key={visitor.id}>
                     <TableCell>{visitor.gate_pass_number || 'N/A'}</TableCell>
                     <TableCell>{visitor.visitor_name}</TableCell>
@@ -267,6 +288,18 @@ export default function Visitor() {
                 ))
               )}
             </TableBody>
+        <TablePagination
+          component="div"
+          count={activeVisitors.length}
+          page={activePage}
+          onPageChange={(_, page) => setActivePage(page)}
+          rowsPerPage={activeRowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setActiveRowsPerPage(parseInt(e.target.value, 10));
+            setActivePage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
           </Table>
         </TableContainer>
       )}

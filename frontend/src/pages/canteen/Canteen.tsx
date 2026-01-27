@@ -22,6 +22,7 @@ import {
   Select,
   MenuItem,
   Chip,
+  TablePagination,
 } from '@mui/material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-toastify'
@@ -55,6 +56,21 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10)
 export default function Canteen() {
   const queryClient = useQueryClient()
   const [tab, setTab] = useState(0)
+
+  const [workersPage, setWorkersPage] = useState(0)
+  const [workersRowsPerPage, setWorkersRowsPerPage] = useState(10)
+  const [menusPage, setMenusPage] = useState(0)
+  const [menusRowsPerPage, setMenusRowsPerPage] = useState(10)
+  const [menuItemsPage, setMenuItemsPage] = useState(0)
+  const [menuItemsRowsPerPage, setMenuItemsRowsPerPage] = useState(10)
+  const [ordersPage, setOrdersPage] = useState(0)
+  const [ordersRowsPerPage, setOrdersRowsPerPage] = useState(10)
+  const [inventoryPage, setInventoryPage] = useState(0)
+  const [inventoryRowsPerPage, setInventoryRowsPerPage] = useState(10)
+  const [feedbackPage, setFeedbackPage] = useState(0)
+  const [feedbackRowsPerPage, setFeedbackRowsPerPage] = useState(10)
+  const [consumptionsPage, setConsumptionsPage] = useState(0)
+  const [consumptionsRowsPerPage, setConsumptionsRowsPerPage] = useState(10)
 
   const [workerForm, setWorkerForm] = useState<WorkerPayload>({
     full_name: '',
@@ -365,7 +381,12 @@ export default function Canteen() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {workers.map((w) => (
+                  {workers
+                    .slice(
+                      workersPage * workersRowsPerPage,
+                      workersPage * workersRowsPerPage + workersRowsPerPage,
+                    )
+                    .map((w) => (
                     <TableRow key={w.id}>
                       <TableCell>{w.worker_number}</TableCell>
                       <TableCell>{w.full_name}</TableCell>
@@ -378,14 +399,31 @@ export default function Canteen() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={workers.length}
+              page={workersPage}
+              onPageChange={(_, newPage) => setWorkersPage(newPage)}
+              rowsPerPage={workersRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setWorkersRowsPerPage(Number(event.target.value))
+                setWorkersPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>
     </Grid>
   )
 
-  const renderMenus = () => (
-    <Grid container spacing={3}>
+  const renderMenus = () => {
+    const menuItems = menuItemForm.menu_id
+      ? (queryClient.getQueryData<CanteenMenuItem[]>(['canteenMenuItems', menuItemForm.menu_id]) || [])
+      : []
+
+    return (
+      <Grid container spacing={3}>
       <Grid item xs={12} md={4}>
         <Card>
           <CardContent>
@@ -453,7 +491,12 @@ export default function Canteen() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {menus.map((m) => (
+                  {menus
+                    .slice(
+                      menusPage * menusRowsPerPage,
+                      menusPage * menusRowsPerPage + menusRowsPerPage,
+                    )
+                    .map((m) => (
                     <TableRow key={m.id} hover onClick={() => loadMenuItems(m.id)}>
                       <TableCell>{m.menu_date}</TableCell>
                       <TableCell>{m.meal_type}</TableCell>
@@ -465,6 +508,18 @@ export default function Canteen() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={menus.length}
+              page={menusPage}
+              onPageChange={(_, newPage) => setMenusPage(newPage)}
+              rowsPerPage={menusRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setMenusRowsPerPage(Number(event.target.value))
+                setMenusPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
         <Card sx={{ mt: 3 }}>
@@ -482,7 +537,12 @@ export default function Canteen() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {(menuItemForm.menu_id ? (queryClient.getQueryData<CanteenMenuItem[]>(['canteenMenuItems', menuItemForm.menu_id]) || []) : []).map((i) => (
+                  {menuItems
+                    .slice(
+                      menuItemsPage * menuItemsRowsPerPage,
+                      menuItemsPage * menuItemsRowsPerPage + menuItemsRowsPerPage,
+                    )
+                    .map((i) => (
                     <TableRow key={i.id}>
                       <TableCell>{i.item_name}</TableCell>
                       <TableCell>{i.category || '-'}</TableCell>
@@ -490,17 +550,30 @@ export default function Canteen() {
                       <TableCell><Chip label={i.is_available ? 'Yes' : 'No'} size="small" /></TableCell>
                     </TableRow>
                   ))}
-                  {(!menuItemForm.menu_id || (queryClient.getQueryData<CanteenMenuItem[]>(['canteenMenuItems', menuItemForm.menu_id]) || []).length === 0) && (
+                  {(!menuItemForm.menu_id || menuItems.length === 0) && (
                     <TableRow><TableCell colSpan={4} align="center">No items</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={menuItems.length}
+              page={menuItemsPage}
+              onPageChange={(_, newPage) => setMenuItemsPage(newPage)}
+              rowsPerPage={menuItemsRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setMenuItemsRowsPerPage(Number(event.target.value))
+                setMenuItemsPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>
     </Grid>
-  )
+    )
+  }
 
   const renderOrders = () => (
     <Grid container spacing={3}>
@@ -549,7 +622,12 @@ export default function Canteen() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {orders.map((o) => (
+                  {orders
+                    .slice(
+                      ordersPage * ordersRowsPerPage,
+                      ordersPage * ordersRowsPerPage + ordersRowsPerPage,
+                    )
+                    .map((o) => (
                     <TableRow key={o.id}>
                       <TableCell>{o.order_number}</TableCell>
                       <TableCell>{o.worker_id}</TableCell>
@@ -569,6 +647,18 @@ export default function Canteen() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={orders.length}
+              page={ordersPage}
+              onPageChange={(_, newPage) => setOrdersPage(newPage)}
+              rowsPerPage={ordersRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setOrdersRowsPerPage(Number(event.target.value))
+                setOrdersPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -614,7 +704,12 @@ export default function Canteen() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {inventory.map((i) => (
+                  {inventory
+                    .slice(
+                      inventoryPage * inventoryRowsPerPage,
+                      inventoryPage * inventoryRowsPerPage + inventoryRowsPerPage,
+                    )
+                    .map((i) => (
                     <TableRow key={i.id}>
                       <TableCell>{i.item_code}</TableCell>
                       <TableCell>{i.item_name}</TableCell>
@@ -626,6 +721,18 @@ export default function Canteen() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={inventory.length}
+              page={inventoryPage}
+              onPageChange={(_, newPage) => setInventoryPage(newPage)}
+              rowsPerPage={inventoryRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setInventoryRowsPerPage(Number(event.target.value))
+                setInventoryPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -674,7 +781,12 @@ export default function Canteen() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {feedback.map((f) => (
+                  {feedback
+                    .slice(
+                      feedbackPage * feedbackRowsPerPage,
+                      feedbackPage * feedbackRowsPerPage + feedbackRowsPerPage,
+                    )
+                    .map((f) => (
                     <TableRow key={f.id}>
                       <TableCell>{f.worker_id}</TableCell>
                       <TableCell>{f.meal_type}</TableCell>
@@ -686,6 +798,18 @@ export default function Canteen() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={feedback.length}
+              page={feedbackPage}
+              onPageChange={(_, newPage) => setFeedbackPage(newPage)}
+              rowsPerPage={feedbackRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setFeedbackRowsPerPage(Number(event.target.value))
+                setFeedbackPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -741,7 +865,12 @@ export default function Canteen() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {consumptions.map((c) => (
+                  {consumptions
+                    .slice(
+                      consumptionsPage * consumptionsRowsPerPage,
+                      consumptionsPage * consumptionsRowsPerPage + consumptionsRowsPerPage,
+                    )
+                    .map((c) => (
                     <TableRow key={c.id}>
                       <TableCell>{c.order_id}</TableCell>
                       <TableCell>{c.worker_id}</TableCell>
@@ -753,6 +882,18 @@ export default function Canteen() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={consumptions.length}
+              page={consumptionsPage}
+              onPageChange={(_, newPage) => setConsumptionsPage(newPage)}
+              rowsPerPage={consumptionsRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setConsumptionsRowsPerPage(Number(event.target.value))
+                setConsumptionsPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>

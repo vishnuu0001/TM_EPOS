@@ -24,16 +24,16 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   )
   const token = useSelector((state: RootState) => state.auth.token)
   const user = useSelector((state: RootState) => state.auth.user)
-  
-  console.log('ProtectedRoute check:', { 
-    isAuthenticated, 
+  const hasSession = !!token && !!user
+
+  console.log('ProtectedRoute check:', {
+    isAuthenticated,
     hasToken: !!token,
     hasUser: !!user,
-    tokenInStorage: !!localStorage.getItem('token'),
-    userInStorage: !!localStorage.getItem('user')
+    hasSession,
   })
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !hasSession) {
     console.log('Not authenticated, redirecting to /login')
     return <Navigate to="/login" replace />
   }

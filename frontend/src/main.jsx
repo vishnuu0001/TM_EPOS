@@ -26,14 +26,14 @@ const queryClient = new QueryClient({
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#E2001A',
+      light: '#FF4D4F',
+      dark: '#A30012',
     },
     secondary: {
-      main: '#dc004e',
-      light: '#ff5983',
-      dark: '#9a0036',
+      main: '#374151',
+      light: '#6B7280',
+      dark: '#1F2937',
     },
     success: {
       main: '#2e7d32',

@@ -1,19 +1,27 @@
 import { createSlice } from '@reduxjs/toolkit'
-import { readToken, readUser, writeAuth, clearAuth } from '../../services/storage'
+import { readToken, readUser, writeAuth, clearAuth, isTokenExpired } from '../../services/storage'
 
 const storedUser = readUser()
+const storedToken = readToken()
+const tokenExpired = isTokenExpired(storedToken)
+const computedAuthenticated = !!storedToken && !!storedUser && !tokenExpired
+
+if (!computedAuthenticated && (storedToken || storedUser)) {
+  clearAuth()
+}
 
 const initialState = {
   user: storedUser || null,
-  token: readToken(),
-  isAuthenticated: !!readToken(),
+  token: storedToken,
+  isAuthenticated: computedAuthenticated,
   loading: false,
 }
 
 console.log('Auth initial state:', initialState)
-console.log('LocalStorage token:', readToken()?.substring(0, 20))
+console.log('LocalStorage token:', storedToken?.substring(0, 20))
+console.log('Token expired:', tokenExpired)
 console.log('LocalStorage user:', storedUser)
-console.log('Computed isAuthenticated:', !!readToken())
+console.log('Computed isAuthenticated:', computedAuthenticated)
 
 const authSlice = createSlice({
   name: 'auth',

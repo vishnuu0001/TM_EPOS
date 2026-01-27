@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   Box,
   Grid,
@@ -12,6 +13,7 @@ import {
   TableHead,
   TableRow,
   Chip,
+  TablePagination,
 } from '@mui/material'
 import {
   TrendingUp,
@@ -63,6 +65,8 @@ const StatCard = ({ title, value, icon, color }: any) => (
 
 export default function Dashboard() {
   const user = useSelector((state: RootState) => state.auth.user)
+  const [activitiesPage, setActivitiesPage] = useState(0)
+  const [activitiesRowsPerPage, setActivitiesRowsPerPage] = useState(5)
   const [
     colonyQuery,
     guestQuery,
@@ -244,7 +248,12 @@ export default function Dashboard() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {recentActivities.map((activity) => (
+              {recentActivities
+                .slice(
+                  activitiesPage * activitiesRowsPerPage,
+                  activitiesPage * activitiesRowsPerPage + activitiesRowsPerPage,
+                )
+                .map((activity) => (
                 <TableRow key={activity.id} hover>
                   <TableCell>
                     <Typography variant="body2" fontWeight={500}>
@@ -274,6 +283,18 @@ export default function Dashboard() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={recentActivities.length}
+          page={activitiesPage}
+          onPageChange={(_, newPage) => setActivitiesPage(newPage)}
+          rowsPerPage={activitiesRowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setActivitiesRowsPerPage(Number(event.target.value))
+            setActivitiesPage(0)
+          }}
+          rowsPerPageOptions={[5, 10, 25]}
+        />
       </Box>
     </Box>
   )

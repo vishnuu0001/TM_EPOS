@@ -33,6 +33,12 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { status, data } = error.response
+      const detailMessage =
+        data?.detail ||
+        data?.message ||
+        (typeof data === 'string' ? data : null)
+
+      console.error('[API Error]', { status, data })
 
       switch (status) {
         case 401: {
@@ -64,10 +70,10 @@ axiosInstance.interceptors.response.use(
           }
           break
         case 500:
-          toast.error('Internal server error. Please try again later.')
+          toast.error(detailMessage || 'Internal server error. Please try again later.')
           break
         default:
-          toast.error(data.detail || 'An error occurred.')
+          toast.error(detailMessage || 'An error occurred.')
       }
     } else if (error.request) {
       toast.error('Network error. Please check your connection.')

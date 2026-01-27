@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { readToken, readUser, writeAuth, clearAuth } from '../../services/storage'
+import { readToken, readUser, writeAuth, clearAuth, isTokenExpired } from '../../services/storage'
 
 interface User {
   id: string
@@ -18,17 +18,27 @@ interface AuthState {
   loading: boolean
 }
 
+const storedUser = readUser<User>()
+const storedToken = readToken()
+const tokenExpired = isTokenExpired(storedToken)
+const computedAuthenticated = !!storedToken && !!storedUser && !tokenExpired
+
+if (!computedAuthenticated && (storedToken || storedUser)) {
+  clearAuth()
+}
+
 const initialState: AuthState = {
-  user: readUser<User>(),
-  token: readToken(),
-  isAuthenticated: !!readToken(),
+  user: storedUser,
+  token: storedToken,
+  isAuthenticated: computedAuthenticated,
   loading: false,
 }
 
 console.log('Auth initial state:', initialState)
-console.log('LocalStorage token:', readToken()?.substring(0, 20))
-console.log('LocalStorage user:', readUser<User>())
-console.log('Computed isAuthenticated:', !!readToken())
+console.log('LocalStorage token:', storedToken?.substring(0, 20))
+console.log('Token expired:', tokenExpired)
+console.log('LocalStorage user:', storedUser)
+console.log('Computed isAuthenticated:', computedAuthenticated)
 
 const authSlice = createSlice({
   name: 'auth',

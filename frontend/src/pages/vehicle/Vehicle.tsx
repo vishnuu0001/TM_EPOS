@@ -22,6 +22,7 @@ import {
   Tab,
   Tabs,
   MenuItem,
+  TablePagination,
 } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import vehicleService, { type CreateRequisition } from '../../services/vehicleService';
@@ -30,6 +31,10 @@ import { RootState } from '../../store';
 
 export default function Vehicle() {
   const [activeTab, setActiveTab] = useState(0);
+  const [requisitionsPage, setRequisitionsPage] = useState(0);
+  const [requisitionsRowsPerPage, setRequisitionsRowsPerPage] = useState(10);
+  const [vehiclesPage, setVehiclesPage] = useState(0);
+  const [vehiclesRowsPerPage, setVehiclesRowsPerPage] = useState(10);
   const [openDialog, setOpenDialog] = useState(false);
   const [form, setForm] = useState<CreateRequisition>({
     department: '',
@@ -199,7 +204,9 @@ export default function Vehicle() {
                   </TableCell>
                 </TableRow>
               ) : (
-                requisitions.map((req) => (
+                requisitions
+                  .slice(requisitionsPage * requisitionsRowsPerPage, requisitionsPage * requisitionsRowsPerPage + requisitionsRowsPerPage)
+                  .map((req) => (
                   <TableRow key={req.id}>
                     <TableCell>{req.requisition_number}</TableCell>
                     <TableCell>{req.department}</TableCell>
@@ -216,9 +223,23 @@ export default function Vehicle() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={requisitions.length}
+          page={requisitionsPage}
+          onPageChange={(_, page) => setRequisitionsPage(page)}
+          rowsPerPage={requisitionsRowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setRequisitionsRowsPerPage(parseInt(e.target.value, 10));
+            setRequisitionsPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
       )}
-
-      {activeTab === 1 && (
+              ) : (
+                vehicles
+                  .slice(vehiclesPage * vehiclesRowsPerPage, vehiclesPage * vehiclesRowsPerPage + vehiclesRowsPerPage)
+                  .map((vehicle) => (
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -233,6 +254,18 @@ export default function Vehicle() {
               </TableRow>
             </TableHead>
             <TableBody>
+        <TablePagination
+          component="div"
+          count={vehicles.length}
+          page={vehiclesPage}
+          onPageChange={(_, page) => setVehiclesPage(page)}
+          rowsPerPage={vehiclesRowsPerPage}
+          onRowsPerPageChange={(e) => {
+            setVehiclesRowsPerPage(parseInt(e.target.value, 10));
+            setVehiclesPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+        />
               {vehicles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 4 }}>

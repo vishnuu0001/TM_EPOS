@@ -22,6 +22,7 @@ import {
   Paper,
   TableContainer,
   Chip,
+  TablePagination,
 } from '@mui/material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-toastify'
@@ -48,6 +49,11 @@ const equipmentTypes: EquipmentType[] = [
   'OTHER',
 ]
 
+const manufacturerOptions = ['AutoGen', 'Caterpillar', 'Toyota', 'Volvo', 'Komatsu', 'Other']
+const modelOptions = ['Model-10', 'Model-20', 'Model-30', 'Model-40', 'Model-50', 'Other']
+const capacityOptions = ['5 Ton', '10 Ton', '20 Ton', '50 Ton', '100 Ton', 'Other']
+const locationOptions = ['Plant Yard', 'Bay 1', 'Bay 2', 'Warehouse', 'Workshop', 'Site A', 'Site B', 'Other']
+
 const bookingStatuses: BookingStatus[] = [
   'REQUESTED',
   'APPROVED',
@@ -59,6 +65,15 @@ const bookingStatuses: BookingStatus[] = [
 export default function Equipment() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState(0)
+
+  const [equipmentPage, setEquipmentPage] = useState(0)
+  const [equipmentRowsPerPage, setEquipmentRowsPerPage] = useState(10)
+  const [bookingsPage, setBookingsPage] = useState(0)
+  const [bookingsRowsPerPage, setBookingsRowsPerPage] = useState(10)
+  const [maintenancePage, setMaintenancePage] = useState(0)
+  const [maintenanceRowsPerPage, setMaintenanceRowsPerPage] = useState(10)
+  const [certificationsPage, setCertificationsPage] = useState(0)
+  const [certificationsRowsPerPage, setCertificationsRowsPerPage] = useState(10)
 
   const [equipmentForm, setEquipmentForm] = useState<EquipmentPayload>({
     equipment_number: '',
@@ -330,10 +345,54 @@ export default function Equipment() {
                   ))}
                 </Select>
               </FormControl>
-              <TextField label="Manufacturer" value={equipmentForm.manufacturer} onChange={(e) => setEquipmentForm((p) => ({ ...p, manufacturer: e.target.value }))} />
-              <TextField label="Model" value={equipmentForm.model} onChange={(e) => setEquipmentForm((p) => ({ ...p, model: e.target.value }))} />
-              <TextField label="Capacity" value={equipmentForm.capacity} onChange={(e) => setEquipmentForm((p) => ({ ...p, capacity: e.target.value }))} />
-              <TextField label="Location" value={equipmentForm.location} onChange={(e) => setEquipmentForm((p) => ({ ...p, location: e.target.value }))} />
+              <TextField
+                select
+                label="Manufacturer"
+                value={equipmentForm.manufacturer}
+                onChange={(e) => setEquipmentForm((p) => ({ ...p, manufacturer: e.target.value }))}
+              >
+                {manufacturerOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Model"
+                value={equipmentForm.model}
+                onChange={(e) => setEquipmentForm((p) => ({ ...p, model: e.target.value }))}
+              >
+                {modelOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Capacity"
+                value={equipmentForm.capacity}
+                onChange={(e) => setEquipmentForm((p) => ({ ...p, capacity: e.target.value }))}
+              >
+                {capacityOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Location"
+                value={equipmentForm.location}
+                onChange={(e) => setEquipmentForm((p) => ({ ...p, location: e.target.value }))}
+              >
+                {locationOptions.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {option}
+                  </MenuItem>
+                ))}
+              </TextField>
               <TextField label="Hourly Rate" type="number" value={equipmentForm.hourly_rate ?? ''} onChange={(e) => setEquipmentForm((p) => ({ ...p, hourly_rate: e.target.value ? Number(e.target.value) : undefined }))} />
               <TextField label="Description" multiline minRows={2} value={equipmentForm.description} onChange={(e) => setEquipmentForm((p) => ({ ...p, description: e.target.value }))} />
               <Button variant="contained" onClick={handleCreateEquipment} disabled={createEquipmentMutation.isPending}>Save Equipment</Button>
@@ -357,7 +416,12 @@ export default function Equipment() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {equipment.map((e: Equipment) => (
+                  {equipment
+                    .slice(
+                      equipmentPage * equipmentRowsPerPage,
+                      equipmentPage * equipmentRowsPerPage + equipmentRowsPerPage,
+                    )
+                    .map((e: Equipment) => (
                     <TableRow key={e.id}>
                       <TableCell>{e.equipment_number}</TableCell>
                       <TableCell>{e.name}</TableCell>
@@ -374,6 +438,18 @@ export default function Equipment() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={equipment.length}
+              page={equipmentPage}
+              onPageChange={(_, newPage) => setEquipmentPage(newPage)}
+              rowsPerPage={equipmentRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setEquipmentRowsPerPage(Number(event.target.value))
+                setEquipmentPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -439,7 +515,12 @@ export default function Equipment() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {bookings.map((b: Booking) => (
+                  {bookings
+                    .slice(
+                      bookingsPage * bookingsRowsPerPage,
+                      bookingsPage * bookingsRowsPerPage + bookingsRowsPerPage,
+                    )
+                    .map((b: Booking) => (
                     <TableRow key={b.id}>
                       <TableCell>{b.booking_number}</TableCell>
                       <TableCell>{equipment.find((e) => e.id === b.equipment_id)?.name || 'N/A'}</TableCell>
@@ -475,6 +556,18 @@ export default function Equipment() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={bookings.length}
+              page={bookingsPage}
+              onPageChange={(_, newPage) => setBookingsPage(newPage)}
+              rowsPerPage={bookingsRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setBookingsRowsPerPage(Number(event.target.value))
+                setBookingsPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -538,7 +631,12 @@ export default function Equipment() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {maintenance.map((m: Maintenance) => (
+                  {maintenance
+                    .slice(
+                      maintenancePage * maintenanceRowsPerPage,
+                      maintenancePage * maintenanceRowsPerPage + maintenanceRowsPerPage,
+                    )
+                    .map((m: Maintenance) => (
                     <TableRow key={m.id}>
                       <TableCell>{equipment.find((e) => e.id === m.equipment_id)?.name || 'N/A'}</TableCell>
                       <TableCell>{m.maintenance_type}</TableCell>
@@ -553,6 +651,18 @@ export default function Equipment() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={maintenance.length}
+              page={maintenancePage}
+              onPageChange={(_, newPage) => setMaintenancePage(newPage)}
+              rowsPerPage={maintenanceRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setMaintenanceRowsPerPage(Number(event.target.value))
+                setMaintenancePage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -616,7 +726,12 @@ export default function Equipment() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {certifications.map((c: Certification) => (
+                  {certifications
+                    .slice(
+                      certificationsPage * certificationsRowsPerPage,
+                      certificationsPage * certificationsRowsPerPage + certificationsRowsPerPage,
+                    )
+                    .map((c: Certification) => (
                     <TableRow key={c.id}>
                       <TableCell>{c.operator_id}</TableCell>
                       <TableCell>{c.equipment_type}</TableCell>
@@ -633,6 +748,18 @@ export default function Equipment() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={certifications.length}
+              page={certificationsPage}
+              onPageChange={(_, newPage) => setCertificationsPage(newPage)}
+              rowsPerPage={certificationsRowsPerPage}
+              onRowsPerPageChange={(event) => {
+                setCertificationsRowsPerPage(Number(event.target.value))
+                setCertificationsPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
           </CardContent>
         </Card>
       </Grid>

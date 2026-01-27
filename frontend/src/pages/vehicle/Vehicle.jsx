@@ -22,6 +22,7 @@ import {
   Tab,
   Tabs,
   MenuItem,
+  TablePagination,
 } from '@mui/material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import vehicleService from '../../services/vehicleService'
@@ -29,6 +30,10 @@ import { useSelector } from 'react-redux'
 
 export default function Vehicle() {
   const [activeTab, setActiveTab] = useState(0)
+  const [requisitionsPage, setRequisitionsPage] = useState(0)
+  const [requisitionsRowsPerPage, setRequisitionsRowsPerPage] = useState(10)
+  const [vehiclesPage, setVehiclesPage] = useState(0)
+  const [vehiclesRowsPerPage, setVehiclesRowsPerPage] = useState(10)
   const [openDialog, setOpenDialog] = useState(false)
   const [form, setForm] = useState({
     department: '',
@@ -177,81 +182,113 @@ export default function Vehicle() {
       </Tabs>
 
       {activeTab === 0 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Req #</TableCell>
-                <TableCell>Department</TableCell>
-                <TableCell>Purpose</TableCell>
-                <TableCell>Destination</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Passengers</TableCell>
-                <TableCell>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {requisitions.length === 0 ? (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">No requisitions found. Use New Requisition to create one.</Typography>
-                  </TableCell>
+                  <TableCell>Req #</TableCell>
+                  <TableCell>Department</TableCell>
+                  <TableCell>Purpose</TableCell>
+                  <TableCell>Destination</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Passengers</TableCell>
+                  <TableCell>Status</TableCell>
                 </TableRow>
-              ) : (
-                requisitions.map((req) => (
-                  <TableRow key={req.id}>
-                    <TableCell>{req.requisition_number}</TableCell>
-                    <TableCell>{req.department}</TableCell>
-                    <TableCell>{req.purpose}</TableCell>
-                    <TableCell>{req.destination}</TableCell>
-                    <TableCell>{new Date(req.requested_date).toLocaleDateString()}</TableCell>
-                    <TableCell>{req.number_of_passengers}</TableCell>
-                    <TableCell>
-                      <Chip label={req.status} color={getStatusColor(req.status)} size="small" />
+              </TableHead>
+              <TableBody>
+                {requisitions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">No requisitions found. Use New Requisition to create one.</Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  requisitions
+                    .slice(requisitionsPage * requisitionsRowsPerPage, requisitionsPage * requisitionsRowsPerPage + requisitionsRowsPerPage)
+                    .map((req) => (
+                      <TableRow key={req.id}>
+                        <TableCell>{req.requisition_number}</TableCell>
+                        <TableCell>{req.department}</TableCell>
+                        <TableCell>{req.purpose}</TableCell>
+                        <TableCell>{req.destination}</TableCell>
+                        <TableCell>{new Date(req.requested_date).toLocaleDateString()}</TableCell>
+                        <TableCell>{req.number_of_passengers}</TableCell>
+                        <TableCell>
+                          <Chip label={req.status} color={getStatusColor(req.status)} size="small" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={requisitions.length}
+            page={requisitionsPage}
+            onPageChange={(_, page) => setRequisitionsPage(page)}
+            rowsPerPage={requisitionsRowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRequisitionsRowsPerPage(parseInt(e.target.value, 10))
+              setRequisitionsPage(0)
+            }}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
+        </>
       )}
 
       {activeTab === 1 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Registration</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Make/Model</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Capacity</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {vehicles.length === 0 ? (
+        <>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                    <Typography color="text.secondary">No vehicles found.</Typography>
-                  </TableCell>
+                  <TableCell>Registration</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Make/Model</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Capacity</TableCell>
                 </TableRow>
-              ) : (
-                vehicles.map((vehicle) => (
-                  <TableRow key={vehicle.id}>
-                    <TableCell>{vehicle.registration_number}</TableCell>
-                    <TableCell>{vehicle.vehicle_type}</TableCell>
-                    <TableCell>{vehicle.make_model}</TableCell>
-                    <TableCell>
-                      <Chip label={vehicle.status} color={getStatusColor(vehicle.status)} size="small" />
+              </TableHead>
+              <TableBody>
+                {vehicles.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                      <Typography color="text.secondary">No vehicles found.</Typography>
                     </TableCell>
-                    <TableCell>{vehicle.capacity}</TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : (
+                  vehicles
+                    .slice(vehiclesPage * vehiclesRowsPerPage, vehiclesPage * vehiclesRowsPerPage + vehiclesRowsPerPage)
+                    .map((vehicle) => (
+                      <TableRow key={vehicle.id}>
+                        <TableCell>{vehicle.registration_number}</TableCell>
+                        <TableCell>{vehicle.vehicle_type}</TableCell>
+                        <TableCell>{vehicle.make_model}</TableCell>
+                        <TableCell>
+                          <Chip label={vehicle.status} color={getStatusColor(vehicle.status)} size="small" />
+                        </TableCell>
+                        <TableCell>{vehicle.capacity}</TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={vehicles.length}
+            page={vehiclesPage}
+            onPageChange={(_, page) => setVehiclesPage(page)}
+            rowsPerPage={vehiclesRowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setVehiclesRowsPerPage(parseInt(e.target.value, 10))
+              setVehiclesPage(0)
+            }}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+          />
+        </>
       )}
 
       {/* Create Requisition Dialog */}

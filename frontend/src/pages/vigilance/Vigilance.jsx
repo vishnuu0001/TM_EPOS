@@ -24,6 +24,7 @@ import {
   Chip,
   Switch,
   FormControlLabel,
+  TablePagination,
 } from '@mui/material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-toastify'
@@ -38,6 +39,16 @@ const isoDateTime = (d) => d.toISOString().slice(0, 16)
 export default function Vigilance() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState(0)
+  const [rostersPage, setRostersPage] = useState(0)
+  const [rostersRowsPerPage, setRostersRowsPerPage] = useState(10)
+  const [checkpointsPage, setCheckpointsPage] = useState(0)
+  const [checkpointsRowsPerPage, setCheckpointsRowsPerPage] = useState(10)
+  const [patrolPage, setPatrolPage] = useState(0)
+  const [patrolRowsPerPage, setPatrolRowsPerPage] = useState(10)
+  const [incidentsPage, setIncidentsPage] = useState(0)
+  const [incidentsRowsPerPage, setIncidentsRowsPerPage] = useState(10)
+  const [sosPage, setSosPage] = useState(0)
+  const [sosRowsPerPage, setSosRowsPerPage] = useState(10)
 
   const [rosterForm, setRosterForm] = useState({
     guard_id: '',
@@ -401,7 +412,9 @@ export default function Vigilance() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {rosters.map((r) => (
+                  {rosters
+                    .slice(rostersPage * rostersRowsPerPage, rostersPage * rostersRowsPerPage + rostersRowsPerPage)
+                    .map((r) => (
                     <TableRow key={r.id}>
                       <TableCell>{r.roster_number}</TableCell>
                       <TableCell>{r.guard_name}</TableCell>
@@ -416,6 +429,18 @@ export default function Vigilance() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={rosters.length}
+              page={rostersPage}
+              onPageChange={(_, page) => setRostersPage(page)}
+              rowsPerPage={rostersRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRostersRowsPerPage(parseInt(e.target.value, 10))
+                setRostersPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -462,7 +487,9 @@ export default function Vigilance() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {checkpoints.map((c) => (
+                  {checkpoints
+                    .slice(checkpointsPage * checkpointsRowsPerPage, checkpointsPage * checkpointsRowsPerPage + checkpointsRowsPerPage)
+                    .map((c) => (
                     <TableRow key={c.id}>
                       <TableCell>{c.checkpoint_number}</TableCell>
                       <TableCell>{c.checkpoint_name}</TableCell>
@@ -477,6 +504,18 @@ export default function Vigilance() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={checkpoints.length}
+              page={checkpointsPage}
+              onPageChange={(_, page) => setCheckpointsPage(page)}
+              rowsPerPage={checkpointsRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setCheckpointsRowsPerPage(parseInt(e.target.value, 10))
+                setCheckpointsPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -551,7 +590,9 @@ export default function Vigilance() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {patrolLogs.map((p) => (
+                  {patrolLogs
+                    .slice(patrolPage * patrolRowsPerPage, patrolPage * patrolRowsPerPage + patrolRowsPerPage)
+                    .map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>{p.log_number}</TableCell>
                       <TableCell>{p.duty_roster_id}</TableCell>
@@ -567,6 +608,18 @@ export default function Vigilance() {
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={patrolLogs.length}
+              page={patrolPage}
+              onPageChange={(_, page) => setPatrolPage(page)}
+              rowsPerPage={patrolRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setPatrolRowsPerPage(parseInt(e.target.value, 10))
+                setPatrolPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -637,31 +690,54 @@ export default function Vigilance() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {incidents.map((i) => (
-                    <TableRow key={i.id}>
-                      <TableCell>{i.incident_number}</TableCell>
-                      <TableCell>{i.title}</TableCell>
-                      <TableCell><Chip label={i.severity} color={i.severity === 'high' || i.severity === 'critical' ? 'error' : 'default'} size="small" /></TableCell>
-                      <TableCell><Chip label={i.status} size="small" /></TableCell>
-                      <TableCell>{new Date(i.incident_time).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1}>
-                          {i.status === 'reported' && (
-                            <Button size="small" onClick={() => incidentAckMutation.mutate(i.id)}>Acknowledge</Button>
-                          )}
-                          {i.status !== 'resolved' && i.status !== 'closed' && (
-                            <Button size="small" onClick={() => incidentResolveMutation.mutate({ id: i.id, notes: 'Resolved via console' })}>Resolve</Button>
-                          )}
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {incidents
+                    .slice(
+                      incidentsPage * incidentsRowsPerPage,
+                      incidentsPage * incidentsRowsPerPage + incidentsRowsPerPage,
+                    )
+                    .map((i) => (
+                      <TableRow key={i.id}>
+                        <TableCell>{i.incident_number}</TableCell>
+                        <TableCell>{i.title}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={i.severity}
+                            color={i.severity === 'high' || i.severity === 'critical' ? 'error' : 'default'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell><Chip label={i.status} size="small" /></TableCell>
+                        <TableCell>{new Date(i.incident_time).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1}>
+                            {i.status === 'reported' && (
+                              <Button size="small" onClick={() => incidentAckMutation.mutate(i.id)}>Acknowledge</Button>
+                            )}
+                            {i.status !== 'resolved' && i.status !== 'closed' && (
+                              <Button size="small" onClick={() => incidentResolveMutation.mutate({ id: i.id, notes: 'Resolved via console' })}>Resolve</Button>
+                            )}
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   {incidents.length === 0 && (
                     <TableRow><TableCell colSpan={6} align="center">No incidents</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={incidents.length}
+              page={incidentsPage}
+              onPageChange={(_, page) => setIncidentsPage(page)}
+              rowsPerPage={incidentsRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setIncidentsRowsPerPage(parseInt(e.target.value, 10))
+                setIncidentsPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
           </CardContent>
         </Card>
       </Grid>
@@ -709,31 +785,54 @@ export default function Vigilance() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sosAlerts.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell>{s.alert_number}</TableCell>
-                      <TableCell>{s.guard_name}</TableCell>
-                      <TableCell>{s.alert_type}</TableCell>
-                      <TableCell><Chip label={s.status} size="small" color={s.status === 'active' ? 'error' : s.status === 'responding' ? 'warning' : 'default'} /></TableCell>
-                      <TableCell>{new Date(s.alert_time).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1}>
-                          {s.status === 'active' && (
-                            <Button size="small" onClick={() => sosAckMutation.mutate(s.id)}>Acknowledge</Button>
-                          )}
-                          {s.status !== 'resolved' && s.status !== 'false_alarm' && (
-                            <Button size="small" onClick={() => sosResolveMutation.mutate({ id: s.id, notes: 'Resolved' })}>Resolve</Button>
-                          )}
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {sosAlerts
+                    .slice(
+                      sosPage * sosRowsPerPage,
+                      sosPage * sosRowsPerPage + sosRowsPerPage,
+                    )
+                    .map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>{s.alert_number}</TableCell>
+                        <TableCell>{s.guard_name}</TableCell>
+                        <TableCell>{s.alert_type}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={s.status}
+                            size="small"
+                            color={s.status === 'active' ? 'error' : s.status === 'responding' ? 'warning' : 'default'}
+                          />
+                        </TableCell>
+                        <TableCell>{new Date(s.alert_time).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Stack direction="row" spacing={1}>
+                            {s.status === 'active' && (
+                              <Button size="small" onClick={() => sosAckMutation.mutate(s.id)}>Acknowledge</Button>
+                            )}
+                            {s.status !== 'resolved' && s.status !== 'false_alarm' && (
+                              <Button size="small" onClick={() => sosResolveMutation.mutate({ id: s.id, notes: 'Resolved' })}>Resolve</Button>
+                            )}
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   {sosAlerts.length === 0 && (
                     <TableRow><TableCell colSpan={6} align="center">No SOS alerts</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
             </TableContainer>
+            <TablePagination
+              component="div"
+              count={sosAlerts.length}
+              page={sosPage}
+              onPageChange={(_, page) => setSosPage(page)}
+              rowsPerPage={sosRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setSosRowsPerPage(parseInt(e.target.value, 10))
+                setSosPage(0)
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
           </CardContent>
         </Card>
       </Grid>
