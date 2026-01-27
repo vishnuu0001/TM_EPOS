@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import List, Optional
 from datetime import datetime, timedelta
 import sys
@@ -105,13 +105,57 @@ def _seed_guesthouse_data(db: Session) -> None:
     db.commit()
 
 
+def _normalize_guesthouse_enums(db: Session) -> None:
+    """Normalize legacy enum values to lowercase, snake_case values."""
+    db.execute(text(
+        """
+        UPDATE guesthouse_rooms
+        SET room_type = CASE room_type
+            WHEN 'Single' THEN 'single'
+            WHEN 'Double' THEN 'double'
+            WHEN 'Suite' THEN 'suite'
+            WHEN 'Dormitory' THEN 'dormitory'
+            ELSE room_type
+        END,
+            status = CASE status
+            WHEN 'Available' THEN 'available'
+            WHEN 'Occupied' THEN 'occupied'
+            WHEN 'Maintenance' THEN 'maintenance'
+            WHEN 'Reserved' THEN 'reserved'
+            ELSE status
+        END
+        """
+    ))
+    db.execute(text(
+        """
+        UPDATE guesthouse_bookings
+        SET status = CASE status
+            WHEN 'Confirmed' THEN 'confirmed'
+            WHEN 'CheckedIn' THEN 'checked_in'
+            WHEN 'CheckedOut' THEN 'checked_out'
+            WHEN 'Cancelled' THEN 'cancelled'
+            WHEN 'Pending' THEN 'pending'
+            ELSE status
+        END
+        """
+    ))
+    db.commit()
+
+
 @app.on_event("startup")
 async def startup_event():
     if _should_seed() and _should_seed_first_boot("guesthouse"):
         db = next(get_db())
         try:
             _seed_guesthouse_data(db)
+            _normalize_guesthouse_enums(db)
             _mark_seeded("guesthouse")
+        finally:
+            db.close()
+    else:
+        db = next(get_db())
+        try:
+            _normalize_guesthouse_enums(db)
         finally:
             db.close()
 
@@ -200,6 +244,9 @@ async def create_booking(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    user_id = current_user.get("id") if isinstance(current_user, dict) else getattr(current_user, "id", None)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid user context")
     # Check room availability
     room = db.query(Room).filter(Room.id == booking_data.room_id).first()
     if not room:
@@ -226,12 +273,16 @@ async def create_booking(
     booking = Booking(
         **booking_data.model_dump(),
         booking_number=booking_number,
-        booked_by_id=current_user.id
+        booked_by_id=user_id
     )
-    db.add(booking)
-    db.commit()
-    db.refresh(booking)
-    return booking
+    try:
+        db.add(booking)
+        db.commit()
+        db.refresh(booking)
+        return booking
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create booking: {exc}")
 
 @app.get("/bookings", response_model=List[BookingResponse])
 async def list_bookings(

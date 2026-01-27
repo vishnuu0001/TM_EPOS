@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = _REQUIRED_SECRET_KEY
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 564230  # 24 hours
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 8  # 8 minutes
     REFRESH_TOKEN_EXPIRE_DAYS: int = 365
     
     # CORS

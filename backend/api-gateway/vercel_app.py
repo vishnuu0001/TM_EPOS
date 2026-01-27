@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from mangum import Mangum
 from sqlalchemy.orm import Session
 import httpx
@@ -224,7 +224,7 @@ async def colony_dashboard_stats(request: Request, current_user: dict = Depends(
 
 # Proxy endpoints to microservices
 from fastapi import Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 async def proxy_request(request: Request, service_url: str, path: str):
     """Proxy request to microservice"""
@@ -243,14 +243,10 @@ async def proxy_request(request: Request, service_url: str, path: str):
                 params=request.query_params,
                 timeout=10.0,
             )
-            try:
-                payload = response.json()
-                return JSONResponse(content=payload, status_code=response.status_code)
-            except ValueError:
-                return JSONResponse(
-                    content={"detail": response.text},
-                    status_code=response.status_code
-                )
+                content_type = response.headers.get("content-type", "")
+                if "application/json" in content_type:
+                    return JSONResponse(content=response.json(), status_code=response.status_code)
+                return Response(content=response.text, status_code=response.status_code, media_type=content_type or "text/plain")
         except httpx.RequestError as exc:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
