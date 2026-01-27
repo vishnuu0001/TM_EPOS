@@ -243,10 +243,14 @@ async def proxy_request(request: Request, service_url: str, path: str):
                 params=request.query_params,
                 timeout=10.0,
             )
-                content_type = response.headers.get("content-type", "")
-                if "application/json" in content_type:
-                    return JSONResponse(content=response.json(), status_code=response.status_code)
-                return Response(content=response.text, status_code=response.status_code, media_type=content_type or "text/plain")
+            content_type = response.headers.get("content-type", "")
+            if "application/json" in content_type:
+                return JSONResponse(content=response.json(), status_code=response.status_code)
+            return Response(
+                content=response.text,
+                status_code=response.status_code,
+                media_type=content_type or "text/plain",
+            )
         except httpx.RequestError as exc:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
