@@ -4,35 +4,46 @@ export interface VisitorRequest {
   id: string;
   request_number: string;
   visitor_name: string;
-  visitor_email?: string;
+  visitor_company?: string;
   visitor_phone: string;
-  visitor_company: string;
-  purpose: string;
-  sponsor_id: string;
+  visitor_email?: string;
+  visitor_type: string;
+  sponsor_employee_id: string;
+  sponsor_name: string;
+  sponsor_department?: string;
+  purpose_of_visit: string;
   visit_date: string;
-  visit_time: string;
-  expected_duration: number;
-  num_visitors: number;
+  expected_duration?: number;
+  areas_to_visit?: string;
   status: string;
-  training_completed: boolean;
-  medical_verified: boolean;
-  gate_pass_number?: string;
-  qr_code?: string;
+  safety_required: boolean;
+  medical_required: boolean;
+  approved_by_sponsor: boolean;
+  approved_by_safety: boolean;
+  approved_by_security: boolean;
+  final_approved_by?: string;
+  final_approved_at?: string;
+  rejection_reason?: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateVisitorRequest {
   visitor_name: string;
-  visitor_email?: string;
+  visitor_company?: string;
   visitor_phone: string;
-  visitor_company: string;
-  purpose: string;
-  sponsor_id: string;
+  visitor_email?: string;
+  visitor_type: string;
+  sponsor_employee_id: string;
+  sponsor_name: string;
+  sponsor_department?: string;
+  purpose_of_visit: string;
   visit_date: string;
-  visit_time: string;
-  expected_duration: number;
-  num_visitors: number;
+  expected_duration?: number;
+  areas_to_visit?: string;
+  safety_required?: boolean;
+  medical_required?: boolean;
+  visit_time?: string;
 }
 
 export interface TrainingModule {
@@ -104,13 +115,17 @@ const visitorService = {
     return response.data;
   },
 
-  approveRequest: async (id: string, remarks?: string) => {
-    const response = await api.post(`/api/visitor/requests/${id}/approve`, { remarks });
+  approveRequest: async (id: string, level: 'sponsor' | 'safety' | 'security' | 'final' = 'final') => {
+    const response = await api.post(`/api/visitor/requests/${id}/approve`, null, {
+      params: { level },
+    });
     return response.data;
   },
 
-  rejectRequest: async (id: string, remarks: string) => {
-    const response = await api.post(`/api/visitor/requests/${id}/reject`, { remarks });
+  rejectRequest: async (id: string, reason: string) => {
+    const response = await api.post(`/api/visitor/requests/${id}/reject`, null, {
+      params: { reason },
+    });
     return response.data;
   },
 

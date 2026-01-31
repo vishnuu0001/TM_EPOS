@@ -88,6 +88,9 @@ export default function ColonyMaintenance() {
   const [activeTab, setActiveTab] = useState(0)
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedRequestId, setSelectedRequestId] = useState(null)
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejectRequestId, setRejectRequestId] = useState(null)
   const [requestFilter, setRequestFilter] = useState({})
 
   const [requestForm, setRequestForm] = useState({
@@ -327,7 +330,34 @@ export default function ColonyMaintenance() {
 
   const handleStatusChange = () => {
     if (!selectedRequestId) return
-    statusMutation.mutate({ id: selectedRequestId, payload: statusForm })
+    const payload = {
+      ...statusForm,
+      notes: statusForm.notes?.trim() ? statusForm.notes.trim() : undefined,
+    }
+    statusMutation.mutate({ id: selectedRequestId, payload })
+  }
+
+  const canDecide = (status) => status === 'submitted'
+
+  const handleApprove = (id) => {
+    statusMutation.mutate({ id, payload: { status: 'assigned', notes: 'Approved' } })
+  }
+
+  const openRejectDialog = (id) => {
+    setRejectRequestId(id)
+    setRejectReason('')
+    setRejectDialogOpen(true)
+  }
+
+  const handleReject = () => {
+    if (!rejectRequestId || !rejectReason.trim()) return
+    statusMutation.mutate({
+      id: rejectRequestId,
+      payload: { status: 'cancelled', notes: rejectReason.trim() },
+    })
+    setRejectDialogOpen(false)
+    setRejectReason('')
+    setRejectRequestId(null)
   }
 
   const handleUpload = () => {
@@ -427,12 +457,13 @@ export default function ColonyMaintenance() {
                   <TableCell>Priority</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Created</TableCell>
+                  <TableCell>Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {requests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">No maintenance requests yet.</Typography>
                     </TableCell>
                   </TableRow>
@@ -458,6 +489,36 @@ export default function ColonyMaintenance() {
                         />
                       </TableCell>
                       <TableCell>{new Date(req.created_at).toLocaleString()}</TableCell>
+                      <TableCell>
+                        {canDecide(req.status) ? (
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleApprove(req.id)
+                              }}
+                              disabled={statusMutation.isPending}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                openRejectDialog(req.id)
+                              }}
+                            >
+                              Reject
+                            </Button>
+                          </Box>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -1053,6 +1114,31 @@ export default function ColonyMaintenance() {
           <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleCreateRequest} disabled={createRequestMutation.isPending}>
             Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Reject Maintenance Request</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <TextField
+            label="Rejection Reason"
+            multiline
+            minRows={3}
+            fullWidth
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleReject}
+            disabled={!rejectReason.trim() || statusMutation.isPending}
+          >
+            {statusMutation.isPending ? 'Rejecting...' : 'Reject'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  MenuItem,
   Grid,
   Card,
   CardContent,
@@ -34,17 +35,25 @@ export default function Visitor() {
   const [activeRowsPerPage, setActiveRowsPerPage] = useState(10)
   const [activeTab, setActiveTab] = useState(0)
   const [openDialog, setOpenDialog] = useState(false)
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState(null)
+  const [rejectReason, setRejectReason] = useState('')
   const [form, setForm] = useState({
     visitor_name: '',
     visitor_phone: '',
     visitor_email: '',
     visitor_company: '',
-    purpose: '',
-    sponsor_id: '',
+    visitor_type: 'guest',
+    sponsor_employee_id: '',
+    sponsor_name: '',
+    sponsor_department: '',
+    purpose_of_visit: '',
     visit_date: '',
     visit_time: '',
     expected_duration: 1,
-    num_visitors: 1,
+    areas_to_visit: '',
+    safety_required: true,
+    medical_required: true,
   })
 
   const queryClient = useQueryClient()
@@ -81,36 +90,118 @@ export default function Visitor() {
     },
   })
 
+  const approveMutation = useMutation({
+    mutationFn: (id) => visitorService.approveRequest(id, 'final'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visitorRequests'] })
+      queryClient.invalidateQueries({ queryKey: ['visitorStats'] })
+    },
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }) => visitorService.rejectRequest(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['visitorRequests'] })
+      queryClient.invalidateQueries({ queryKey: ['visitorStats'] })
+      setRejectDialogOpen(false)
+      setSelectedRequest(null)
+      setRejectReason('')
+    },
+  })
+
   const resetForm = () => {
     setForm({
       visitor_name: '',
       visitor_phone: '',
       visitor_email: '',
       visitor_company: '',
-      purpose: '',
-      sponsor_id: user?.id || '',
+      visitor_type: 'guest',
+      sponsor_employee_id: user?.employee_id || user?.id || '',
+      sponsor_name: user?.full_name || '',
+      sponsor_department: user?.department || '',
+      purpose_of_visit: '',
       visit_date: '',
       visit_time: '',
       expected_duration: 1,
-      num_visitors: 1,
+      areas_to_visit: '',
+      safety_required: true,
+      medical_required: true,
     })
   }
 
   const handleSubmit = () => {
+    const visitDateTime = form.visit_date
+      ? `${form.visit_date}T${form.visit_time || '00:00'}`
+      : ''
     createMutation.mutate({
-      ...form,
-      sponsor_id: user?.id || '',
+      visitor_name: form.visitor_name,
+      visitor_phone: form.visitor_phone,
+      visitor_email: form.visitor_email || undefined,
+      visitor_company: form.visitor_company || undefined,
+      visitor_type: form.visitor_type,
+      sponsor_employee_id: form.sponsor_employee_id || user?.employee_id || user?.id || '',
+      sponsor_name: form.sponsor_name || user?.full_name || '',
+      sponsor_department: form.sponsor_department || user?.department || undefined,
+      purpose_of_visit: form.purpose_of_visit,
+      visit_date: visitDateTime,
+      expected_duration: form.expected_duration || undefined,
+      areas_to_visit: form.areas_to_visit || undefined,
+      safety_required: form.safety_required,
+      medical_required: form.medical_required,
     })
   }
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: 'warning',
+      submitted: 'warning',
+      training_pending: 'warning',
+      training_completed: 'info',
+      medical_pending: 'warning',
+      medical_uploaded: 'info',
+      pending_approval: 'warning',
       approved: 'success',
       rejected: 'error',
-      completed: 'info',
+      gate_pass_issued: 'info',
+      expired: 'default',
     }
     return colors[status] || 'default'
+  }
+
+  const isTrainingDone = (status) => [
+    'training_completed',
+    'medical_pending',
+    'medical_uploaded',
+    'pending_approval',
+    'approved',
+    'gate_pass_issued',
+    'expired',
+  ].includes(status)
+
+  const isMedicalVerified = (status) => [
+    'pending_approval',
+    'approved',
+    'gate_pass_issued',
+    'expired',
+  ].includes(status)
+
+  const canDecide = (status) => [
+    'submitted',
+    'training_pending',
+    'training_completed',
+    'medical_pending',
+    'medical_uploaded',
+    'pending_approval',
+  ].includes(status)
+
+  const openRejectDialog = (request) => {
+    setSelectedRequest(request)
+    setRejectReason('')
+    setRejectDialogOpen(true)
+  }
+
+  const handleReject = () => {
+    if (!selectedRequest || !rejectReason.trim()) return
+    rejectMutation.mutate({ id: selectedRequest.id, reason: rejectReason.trim() })
   }
 
   return (
@@ -193,12 +284,13 @@ export default function Visitor() {
                   <TableCell>Training</TableCell>
                   <TableCell>Medical</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {requests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">No visitor requests found. Use New Request to create one.</Typography>
                     </TableCell>
                   </TableRow>
@@ -210,24 +302,48 @@ export default function Visitor() {
                         <TableCell>{req.request_number}</TableCell>
                         <TableCell>{req.visitor_name}</TableCell>
                         <TableCell>{req.visitor_company}</TableCell>
-                        <TableCell>{req.purpose}</TableCell>
+                        <TableCell>{req.purpose_of_visit}</TableCell>
                         <TableCell>{new Date(req.visit_date).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Chip
-                            label={req.training_completed ? 'Done' : 'Pending'}
-                            color={req.training_completed ? 'success' : 'warning'}
+                            label={isTrainingDone(req.status) ? 'Done' : 'Pending'}
+                            color={isTrainingDone(req.status) ? 'success' : 'warning'}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={req.medical_verified ? 'Verified' : 'Pending'}
-                            color={req.medical_verified ? 'success' : 'warning'}
+                            label={isMedicalVerified(req.status) ? 'Verified' : 'Pending'}
+                            color={isMedicalVerified(req.status) ? 'success' : 'warning'}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Chip label={req.status} color={getStatusColor(req.status)} size="small" />
+                        </TableCell>
+                        <TableCell>
+                          {canDecide(req.status) ? (
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => approveMutation.mutate(req.id)}
+                                disabled={approveMutation.isPending}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                                onClick={() => openRejectDialog(req)}
+                              >
+                                Deny
+                              </Button>
+                            </Box>
+                          ) : (
+                            '-'
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -279,7 +395,7 @@ export default function Visitor() {
                         <TableCell>{visitor.gate_pass_number}</TableCell>
                         <TableCell>{visitor.visitor_name}</TableCell>
                         <TableCell>{visitor.visitor_company}</TableCell>
-                        <TableCell>{visitor.purpose}</TableCell>
+                        <TableCell>{visitor.purpose_of_visit}</TableCell>
                         <TableCell>{new Date(visitor.visit_date).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Chip label={visitor.status} color={getStatusColor(visitor.status)} size="small" />
@@ -326,6 +442,21 @@ export default function Visitor() {
                 onChange={(e) => setForm({ ...form, visitor_phone: e.target.value })}
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                select
+                label="Visitor Type"
+                value={form.visitor_type}
+                onChange={(e) => setForm({ ...form, visitor_type: e.target.value })}
+              >
+                <MenuItem value="contractor">Contractor</MenuItem>
+                <MenuItem value="vendor">Vendor</MenuItem>
+                <MenuItem value="consultant">Consultant</MenuItem>
+                <MenuItem value="guest">Guest</MenuItem>
+                <MenuItem value="official">Official</MenuItem>
+              </TextField>
+            </Grid>
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -345,9 +476,41 @@ export default function Visitor() {
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Purpose"
-                value={form.purpose}
-                onChange={(e) => setForm({ ...form, purpose: e.target.value })}
+                label="Purpose of Visit"
+                value={form.purpose_of_visit}
+                onChange={(e) => setForm({ ...form, purpose_of_visit: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Sponsor Name"
+                value={form.sponsor_name}
+                onChange={(e) => setForm({ ...form, sponsor_name: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Sponsor Employee ID"
+                value={form.sponsor_employee_id}
+                onChange={(e) => setForm({ ...form, sponsor_employee_id: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Sponsor Department"
+                value={form.sponsor_department}
+                onChange={(e) => setForm({ ...form, sponsor_department: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Areas to Visit"
+                value={form.areas_to_visit}
+                onChange={(e) => setForm({ ...form, areas_to_visit: e.target.value })}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -382,11 +545,26 @@ export default function Visitor() {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                type="number"
-                label="Number of Visitors"
-                value={form.num_visitors}
-                onChange={(e) => setForm({ ...form, num_visitors: Number(e.target.value) })}
-              />
+                select
+                label="Safety Required"
+                value={form.safety_required ? 'yes' : 'no'}
+                onChange={(e) => setForm({ ...form, safety_required: e.target.value === 'yes' })}
+              >
+                <MenuItem value="yes">Yes</MenuItem>
+                <MenuItem value="no">No</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                select
+                label="Medical Required"
+                value={form.medical_required ? 'yes' : 'no'}
+                onChange={(e) => setForm({ ...form, medical_required: e.target.value === 'yes' })}
+              >
+                <MenuItem value="yes">Yes</MenuItem>
+                <MenuItem value="no">No</MenuItem>
+              </TextField>
             </Grid>
           </Grid>
         </DialogContent>
@@ -394,6 +572,32 @@ export default function Visitor() {
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleSubmit}>
             Submit Request
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Deny Visitor Request</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Rejection Reason"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            multiline
+            rows={3}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleReject}
+            disabled={!rejectReason.trim() || rejectMutation.isPending}
+          >
+            {rejectMutation.isPending ? 'Denying...' : 'Deny'}
           </Button>
         </DialogActions>
       </Dialog>

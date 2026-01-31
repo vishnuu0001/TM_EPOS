@@ -16,6 +16,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Autocomplete,
   Grid,
   Card,
   CardContent,
@@ -29,12 +30,17 @@ import vehicleService from '../../services/vehicleService'
 import { useSelector } from 'react-redux'
 
 export default function Vehicle() {
+  const departmentOptions = ['Operations', 'Maintenance', 'Logistics', 'Security', 'Administration', 'HR', 'Finance', 'IT', 'Procurement']
+  const purposeOptions = ['Site Visit', 'Material Transport', 'Staff Pickup', 'Client Meeting', 'Emergency', 'Inspection', 'Training', 'Other']
   const [activeTab, setActiveTab] = useState(0)
   const [requisitionsPage, setRequisitionsPage] = useState(0)
   const [requisitionsRowsPerPage, setRequisitionsRowsPerPage] = useState(10)
   const [vehiclesPage, setVehiclesPage] = useState(0)
   const [vehiclesRowsPerPage, setVehiclesRowsPerPage] = useState(10)
   const [openDialog, setOpenDialog] = useState(false)
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false)
+  const [selectedRequisition, setSelectedRequisition] = useState(null)
+  const [selectedVehicleId, setSelectedVehicleId] = useState('')
   const [form, setForm] = useState({
     department: '',
     purpose: '',
@@ -81,6 +87,17 @@ export default function Vehicle() {
     },
   })
 
+  const approveMutation = useMutation({
+    mutationFn: ({ requisitionId, vehicleId }) => vehicleService.approveRequisition(requisitionId, vehicleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requisitions'] })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStats'] })
+      setApproveDialogOpen(false)
+      setSelectedRequisition(null)
+      setSelectedVehicleId('')
+    },
+  })
+
   const resetForm = () => {
     setForm({
       department: '',
@@ -96,9 +113,21 @@ export default function Vehicle() {
   }
 
   const handleSubmit = () => {
+    const departureDateTime = form.requested_date
+      ? `${form.requested_date}T${form.requested_time || '00:00'}`
+      : ''
+
     createMutation.mutate({
-      ...form,
+      purpose: form.purpose,
+      destination: form.destination,
+      departure_date: departureDateTime,
+      number_of_passengers: form.number_of_passengers,
+      cost_center: form.department || undefined,
+      notes: form.pickup_location || undefined,
       requester_id: user?.id || '',
+      department: form.department,
+      pickup_location: form.pickup_location,
+      vehicle_type: form.vehicle_type || undefined,
     })
   }
 
@@ -113,6 +142,19 @@ export default function Vehicle() {
       in_use: 'warning',
     }
     return colors[status] || 'default'
+  }
+
+  const availableVehicles = vehicles.filter((vehicle) => vehicle.status === 'AVAILABLE')
+
+  const openApproveDialog = (requisition) => {
+    setSelectedRequisition(requisition)
+    setSelectedVehicleId('')
+    setApproveDialogOpen(true)
+  }
+
+  const handleApprove = () => {
+    if (!selectedRequisition || !selectedVehicleId) return
+    approveMutation.mutate({ requisitionId: selectedRequisition.id, vehicleId: selectedVehicleId })
   }
 
   return (
@@ -159,7 +201,7 @@ export default function Vehicle() {
                 <Typography color="text.secondary" gutterBottom>
                   Pending Requests
                 </Typography>
-                <Typography variant="h4">{stats.pending_requisitions || 0}</Typography>
+                <Typography variant="h4">{stats.pending_requisitions ?? stats.pending_approvals ?? 0}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -194,12 +236,13 @@ export default function Vehicle() {
                   <TableCell>Date</TableCell>
                   <TableCell>Passengers</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {requisitions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">No requisitions found. Use New Requisition to create one.</Typography>
                     </TableCell>
                   </TableRow>
@@ -212,10 +255,19 @@ export default function Vehicle() {
                         <TableCell>{req.department}</TableCell>
                         <TableCell>{req.purpose}</TableCell>
                         <TableCell>{req.destination}</TableCell>
-                        <TableCell>{new Date(req.requested_date).toLocaleDateString()}</TableCell>
+                        <TableCell>{req.departure_date ? new Date(req.departure_date).toLocaleDateString() : '-'}</TableCell>
                         <TableCell>{req.number_of_passengers}</TableCell>
                         <TableCell>
                           <Chip label={req.status} color={getStatusColor(req.status)} size="small" />
+                        </TableCell>
+                        <TableCell>
+                          {req.status === 'REQUESTED' ? (
+                            <Button size="small" variant="outlined" onClick={() => openApproveDialog(req)}>
+                              Approve
+                            </Button>
+                          ) : (
+                            '-'
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -297,19 +349,29 @@ export default function Vehicle() {
         <DialogContent>
           <Grid container spacing={2} mt={1}>
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Department"
+              <Autocomplete
+                freeSolo
+                options={departmentOptions}
                 value={form.department}
-                onChange={(e) => setForm({ ...form, department: e.target.value })}
+                inputValue={form.department}
+                onChange={(_, newValue) => setForm({ ...form, department: newValue || '' })}
+                onInputChange={(_, newInputValue) => setForm({ ...form, department: newInputValue })}
+                renderInput={(params) => (
+                  <TextField {...params} fullWidth label="Department" />
+                )}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Purpose"
+              <Autocomplete
+                freeSolo
+                options={purposeOptions}
                 value={form.purpose}
-                onChange={(e) => setForm({ ...form, purpose: e.target.value })}
+                inputValue={form.purpose}
+                onChange={(_, newValue) => setForm({ ...form, purpose: newValue || '' })}
+                onInputChange={(_, newInputValue) => setForm({ ...form, purpose: newInputValue })}
+                renderInput={(params) => (
+                  <TextField {...params} fullWidth label="Purpose" />
+                )}
               />
             </Grid>
             <Grid item xs={12}>
@@ -378,6 +440,38 @@ export default function Vehicle() {
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleSubmit}>
             Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Approve Requisition Dialog */}
+      <Dialog open={approveDialogOpen} onClose={() => setApproveDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Approve Requisition</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            select
+            label="Assign Vehicle"
+            value={selectedVehicleId}
+            onChange={(e) => setSelectedVehicleId(e.target.value)}
+            sx={{ mt: 1 }}
+            helperText={availableVehicles.length === 0 ? 'No available vehicles' : ''}
+          >
+            {availableVehicles.map((vehicle) => (
+              <MenuItem key={vehicle.id} value={vehicle.id}>
+                {vehicle.registration_number} • {vehicle.vehicle_type}
+              </MenuItem>
+            ))}
+          </TextField>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setApproveDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleApprove}
+            disabled={!selectedVehicleId || approveMutation.isPending}
+          >
+            {approveMutation.isPending ? 'Approving...' : 'Approve'}
           </Button>
         </DialogActions>
       </Dialog>

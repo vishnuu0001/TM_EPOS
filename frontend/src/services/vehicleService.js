@@ -30,8 +30,10 @@ const vehicleService = {
     return response.data
   },
 
-  approveRequisition: async (id, remarks) => {
-    const response = await api.post(`/api/vehicle/requisitions/${id}/approve`, { remarks })
+  approveRequisition: async (id, vehicleId) => {
+    const response = await api.post(`/api/vehicle/requisitions/${id}/approve`, null, {
+      params: { vehicle_id: vehicleId },
+    })
     return response.data
   },
 

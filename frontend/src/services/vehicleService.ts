@@ -38,18 +38,21 @@ export interface Requisition {
 }
 
 export interface CreateRequisition {
-  department: string;
-  cost_center?: string;
   purpose: string;
   destination: string;
-  pickup_location: string;
-  requested_date: string;
-  requested_time: string;
-  estimated_return?: string;
+  departure_date?: string;
+  return_date?: string;
   number_of_passengers: number;
+  cost_center?: string;
+  notes?: string;
+  requester_id: string;
+  department?: string;
+  pickup_location?: string;
+  requested_date?: string;
+  requested_time?: string;
+  estimated_return?: string;
   vehicle_type?: string;
   special_requirements?: string;
-  requester_id: string;
 }
 
 export interface Trip {
@@ -114,8 +117,10 @@ const vehicleService = {
     return response.data;
   },
 
-  approveRequisition: async (id: string, remarks?: string) => {
-    const response = await api.post(`/api/vehicle/requisitions/${id}/approve`, { remarks });
+  approveRequisition: async (id: string, vehicleId: string) => {
+    const response = await api.post(`/api/vehicle/requisitions/${id}/approve`, null, {
+      params: { vehicle_id: vehicleId },
+    });
     return response.data;
   },
 

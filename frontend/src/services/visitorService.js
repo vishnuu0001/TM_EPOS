@@ -23,13 +23,17 @@ const visitorService = {
     return response.data
   },
 
-  approveRequest: async (id, remarks) => {
-    const response = await api.post(`/api/visitor/requests/${id}/approve`, { remarks })
+  approveRequest: async (id, level = 'final') => {
+    const response = await api.post(`/api/visitor/requests/${id}/approve`, null, {
+      params: { level },
+    })
     return response.data
   },
 
-  rejectRequest: async (id, remarks) => {
-    const response = await api.post(`/api/visitor/requests/${id}/reject`, { remarks })
+  rejectRequest: async (id, reason) => {
+    const response = await api.post(`/api/visitor/requests/${id}/reject`, null, {
+      params: { reason },
+    })
     return response.data
   },
 

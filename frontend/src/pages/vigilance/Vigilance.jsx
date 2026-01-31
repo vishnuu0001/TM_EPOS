@@ -14,6 +14,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Autocomplete,
   Table,
   TableHead,
   TableRow,
@@ -31,6 +32,8 @@ import { toast } from 'react-toastify'
 import vigilanceService from '../../services/vigilanceService'
 
 const shiftTypes = ['morning', 'evening', 'night']
+const gateOptions = ['Main Gate', 'North Gate', 'South Gate', 'East Gate', 'West Gate']
+const sectorOptions = ['Sector A', 'Sector B', 'Sector C', 'Sector D', 'Perimeter']
 const incidentSeverities = ['low', 'medium', 'high', 'critical']
 
 const isoDate = (d) => d.toISOString().slice(0, 10)
@@ -386,9 +389,27 @@ export default function Vigilance() {
                 value={rosterForm.shift_end}
                 onChange={(e) => setRosterForm((p) => ({ ...p, shift_end: e.target.value }))}
               />
-              <TextField label="Gate" value={rosterForm.assigned_gate} onChange={(e) => setRosterForm((p) => ({ ...p, assigned_gate: e.target.value }))} />
-              <TextField label="Sector" value={rosterForm.assigned_sector} onChange={(e) => setRosterForm((p) => ({ ...p, assigned_sector: e.target.value }))} />
-              <TextField label="Patrol Route (IDs)" value={rosterForm.patrol_route} onChange={(e) => setRosterForm((p) => ({ ...p, patrol_route: e.target.value }))} />
+              <Autocomplete
+                options={gateOptions}
+                freeSolo
+                value={rosterForm.assigned_gate || ''}
+                onChange={(_, value) => setRosterForm((p) => ({ ...p, assigned_gate: value || '' }))}
+                renderInput={(params) => <TextField {...params} label="Gate" />}
+              />
+              <Autocomplete
+                options={sectorOptions}
+                freeSolo
+                value={rosterForm.assigned_sector || ''}
+                onChange={(_, value) => setRosterForm((p) => ({ ...p, assigned_sector: value || '' }))}
+                renderInput={(params) => <TextField {...params} label="Sector" />}
+              />
+              <Autocomplete
+                options={checkpoints.map((c) => c.checkpoint_number || c.id)}
+                freeSolo
+                value={rosterForm.patrol_route || ''}
+                onChange={(_, value) => setRosterForm((p) => ({ ...p, patrol_route: value || '' }))}
+                renderInput={(params) => <TextField {...params} label="Patrol Route (IDs)" />}
+              />
               <TextField label="Supervisor" value={rosterForm.supervisor_name} onChange={(e) => setRosterForm((p) => ({ ...p, supervisor_name: e.target.value }))} />
               <TextField label="Instructions" multiline minRows={2} value={rosterForm.special_instructions} onChange={(e) => setRosterForm((p) => ({ ...p, special_instructions: e.target.value }))} />
               <Button variant="contained" onClick={() => rosterMutation.mutate(rosterForm)} disabled={rosterMutation.isPending}>Save Roster</Button>

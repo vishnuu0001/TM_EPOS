@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Box,
   Typography,
@@ -23,6 +23,10 @@ import {
   TableContainer,
   Chip,
   TablePagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-toastify'
@@ -42,6 +46,7 @@ const manufacturerOptions = ['AutoGen', 'Caterpillar', 'Toyota', 'Volvo', 'Komat
 const modelOptions = ['Model-10', 'Model-20', 'Model-30', 'Model-40', 'Model-50', 'Other']
 const capacityOptions = ['5 Ton', '10 Ton', '20 Ton', '50 Ton', '100 Ton', 'Other']
 const locationOptions = ['Plant Yard', 'Bay 1', 'Bay 2', 'Warehouse', 'Workshop', 'Site A', 'Site B', 'Other']
+const costCenterOptions = ['CC-Plant', 'CC-Yard', 'CC-Warehouse', 'CC-Workshop', 'CC-SiteA', 'CC-SiteB']
 
 const bookingStatuses = [
   'REQUESTED',
@@ -95,6 +100,15 @@ export default function Equipment() {
     next_service_date: '',
   })
 
+  const [maintenanceCompleteOpen, setMaintenanceCompleteOpen] = useState(false)
+  const [maintenanceCompleteId, setMaintenanceCompleteId] = useState(null)
+  const [maintenanceCompleteForm, setMaintenanceCompleteForm] = useState({
+    completed_date: '',
+    performed_by: '',
+    cost: undefined,
+    notes: '',
+  })
+
   const [certForm, setCertForm] = useState({
     operator_id: '',
     equipment_type: 'CRANE',
@@ -111,7 +125,10 @@ export default function Equipment() {
 
   const { data: equipment = [] } = useQuery({
     queryKey: ['equipmentList'],
-    queryFn: () => equipmentService.getEquipment(),
+    queryFn: async () => {
+      const data = await equipmentService.getEquipment({ limit: 2000 })
+      return data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    },
   })
 
   const { data: bookings = [] } = useQuery({
@@ -129,11 +146,46 @@ export default function Equipment() {
     queryFn: () => equipmentService.getCertifications(),
   })
 
+  const getCertifiedOperators = (equipmentId) => {
+    const selectedEquipment = equipment.find((e) => e.id === equipmentId)
+    if (!selectedEquipment || !selectedEquipment.requires_certification) {
+      return []
+    }
+    return certifications
+      .filter((c) => c.is_active && c.equipment_type === selectedEquipment.equipment_type)
+      .map((c) => c.operator_id)
+  }
+
+  useEffect(() => {
+    if (!bookingForm.equipment_id) {
+      if (bookingForm.operator_id) {
+        setBookingForm((p) => ({ ...p, operator_id: '' }))
+      }
+      return
+    }
+    const operators = getCertifiedOperators(bookingForm.equipment_id)
+    if (operators.length === 0 || !operators.includes(bookingForm.operator_id)) {
+      setBookingForm((p) => ({ ...p, operator_id: '' }))
+    }
+  }, [bookingForm.equipment_id, certifications])
+
+  useEffect(() => {
+    if (bookingForm.cost_center && !costCenterOptions.includes(bookingForm.cost_center)) {
+      setBookingForm((p) => ({ ...p, cost_center: '' }))
+    }
+  }, [bookingForm.cost_center])
+
   const createEquipmentMutation = useMutation({
     mutationFn: equipmentService.createEquipment,
-    onSuccess: () => {
+    onSuccess: (created) => {
       toast.success('Equipment saved')
+      queryClient.setQueryData(['equipmentList'], (prev) => {
+        if (!prev) return [created]
+        return [created, ...prev]
+      })
       queryClient.invalidateQueries({ queryKey: ['equipmentList'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentDashboard'] })
+      setEquipmentPage(0)
       setEquipmentForm({
         equipment_number: '',
         name: '',
@@ -151,9 +203,15 @@ export default function Equipment() {
 
   const createBookingMutation = useMutation({
     mutationFn: equipmentService.createBooking,
-    onSuccess: () => {
+    onSuccess: (created) => {
       toast.success('Booking created')
+      queryClient.setQueryData(['equipmentBookings'], (prev) => {
+        if (!prev) return [created]
+        return [created, ...prev]
+      })
       queryClient.invalidateQueries({ queryKey: ['equipmentBookings'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentDashboard'] })
+      setBookingsPage(0)
       setBookingForm({
         equipment_id: '',
         operator_id: '',
@@ -171,6 +229,7 @@ export default function Equipment() {
     onSuccess: () => {
       toast.success('Booking approved')
       queryClient.invalidateQueries({ queryKey: ['equipmentBookings'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentDashboard'] })
     },
   })
 
@@ -179,6 +238,8 @@ export default function Equipment() {
     onSuccess: () => {
       toast.success('Booking updated')
       queryClient.invalidateQueries({ queryKey: ['equipmentBookings'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentList'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentDashboard'] })
     },
   })
 
@@ -187,6 +248,8 @@ export default function Equipment() {
     onSuccess: () => {
       toast.success('Maintenance added')
       queryClient.invalidateQueries({ queryKey: ['equipmentMaintenance'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentList'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentDashboard'] })
       setMaintenanceForm({
         equipment_id: '',
         maintenance_type: '',
@@ -198,11 +261,25 @@ export default function Equipment() {
     },
   })
 
+  const updateMaintenanceMutation = useMutation({
+    mutationFn: ({ id, payload }) => equipmentService.updateMaintenance(id, payload),
+    onSuccess: () => {
+      toast.success('Maintenance updated')
+      queryClient.invalidateQueries({ queryKey: ['equipmentMaintenance'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentList'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentDashboard'] })
+      setMaintenanceCompleteOpen(false)
+      setMaintenanceCompleteId(null)
+      setMaintenanceCompleteForm({ completed_date: '', performed_by: '', cost: undefined, notes: '' })
+    },
+  })
+
   const createCertificationMutation = useMutation({
     mutationFn: equipmentService.createCertification,
     onSuccess: () => {
       toast.success('Certification saved')
       queryClient.invalidateQueries({ queryKey: ['equipmentCertifications'] })
+      queryClient.invalidateQueries({ queryKey: ['equipmentDashboard'] })
       setCertForm({
         operator_id: '',
         equipment_type: 'CRANE',
@@ -227,7 +304,41 @@ export default function Equipment() {
       toast.error('Equipment, operator, start/end, and purpose are required')
       return
     }
+    const selectedEquipment = equipment.find((e) => e.id === bookingForm.equipment_id)
+    if (selectedEquipment?.requires_certification) {
+      const hasCert = certifications.some(
+        (c) => c.operator_id === bookingForm.operator_id && c.equipment_type === selectedEquipment.equipment_type && c.is_active,
+      )
+      if (!hasCert) {
+        toast.error('Operator is not certified for the selected equipment')
+        return
+      }
+    }
     createBookingMutation.mutate(bookingForm)
+  }
+
+  const openCompleteMaintenance = (maintenanceId) => {
+    setMaintenanceCompleteId(maintenanceId)
+    setMaintenanceCompleteForm({
+      completed_date: new Date().toISOString().slice(0, 10),
+      performed_by: '',
+      cost: undefined,
+      notes: '',
+    })
+    setMaintenanceCompleteOpen(true)
+  }
+
+  const handleCompleteMaintenance = () => {
+    if (!maintenanceCompleteId || !maintenanceCompleteForm.completed_date) return
+    updateMaintenanceMutation.mutate({
+      id: maintenanceCompleteId,
+      payload: {
+        completed_date: maintenanceCompleteForm.completed_date,
+        performed_by: maintenanceCompleteForm.performed_by || undefined,
+        cost: maintenanceCompleteForm.cost,
+        notes: maintenanceCompleteForm.notes?.trim() ? maintenanceCompleteForm.notes.trim() : undefined,
+      },
+    })
   }
 
   const handleCreateMaintenance = () => {
@@ -447,19 +558,52 @@ export default function Equipment() {
           <CardContent>
             <Typography variant="h6" gutterBottom>New Booking</Typography>
             <Stack spacing={2}>
+              {(() => {
+                const operators = getCertifiedOperators(bookingForm.equipment_id)
+                const selectedOperator = operators.includes(bookingForm.operator_id)
+                  ? bookingForm.operator_id
+                  : ''
+                return (
+                  <>
               <FormControl fullWidth>
                 <InputLabel>Equipment</InputLabel>
                 <Select
                   label="Equipment"
                   value={bookingForm.equipment_id}
-                  onChange={(e) => setBookingForm((p) => ({ ...p, equipment_id: e.target.value }))}
+                  onChange={(e) => {
+                    const equipmentId = e.target.value
+                    const certifiedOperators = getCertifiedOperators(equipmentId)
+                    setBookingForm((p) => ({
+                      ...p,
+                      equipment_id: equipmentId,
+                      operator_id: certifiedOperators.includes(p.operator_id) ? p.operator_id : '',
+                    }))
+                  }}
                 >
                   {equipment.map((e) => (
                     <MenuItem key={e.id} value={e.id}>{e.name}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
-              <TextField label="Operator ID" value={bookingForm.operator_id} onChange={(e) => setBookingForm((p) => ({ ...p, operator_id: e.target.value }))} />
+              <FormControl fullWidth>
+                <InputLabel>Operator</InputLabel>
+                <Select
+                  label="Operator"
+                  value={selectedOperator}
+                  onChange={(e) => setBookingForm((p) => ({ ...p, operator_id: e.target.value }))}
+                  disabled={!bookingForm.equipment_id}
+                >
+                  <MenuItem value="">
+                    {operators.length === 0 ? 'No certified operators' : 'Select operator'}
+                  </MenuItem>
+                  {operators.map((operatorId) => (
+                    <MenuItem key={operatorId} value={operatorId}>{operatorId}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+                  </>
+                )
+              })()}
               <TextField
                 label="Start"
                 type="datetime-local"
@@ -476,7 +620,19 @@ export default function Equipment() {
               />
               <TextField label="Purpose" value={bookingForm.purpose} onChange={(e) => setBookingForm((p) => ({ ...p, purpose: e.target.value }))} />
               <TextField label="Location" value={bookingForm.location} onChange={(e) => setBookingForm((p) => ({ ...p, location: e.target.value }))} />
-              <TextField label="Cost Center" value={bookingForm.cost_center} onChange={(e) => setBookingForm((p) => ({ ...p, cost_center: e.target.value }))} />
+              <FormControl fullWidth>
+                <InputLabel>Cost Center</InputLabel>
+                <Select
+                  label="Cost Center"
+                  value={costCenterOptions.includes(bookingForm.cost_center || '') ? bookingForm.cost_center : ''}
+                  onChange={(e) => setBookingForm((p) => ({ ...p, cost_center: e.target.value }))}
+                >
+                  <MenuItem value="">Select cost center</MenuItem>
+                  {costCenterOptions.map((option) => (
+                    <MenuItem key={option} value={option}>{option}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <Button variant="contained" onClick={handleCreateBooking} disabled={createBookingMutation.isPending}>Create Booking</Button>
             </Stack>
           </CardContent>
@@ -493,6 +649,7 @@ export default function Equipment() {
                     <TableCell>#</TableCell>
                     <TableCell>Equipment</TableCell>
                     <TableCell>Operator</TableCell>
+                    <TableCell>Compliance</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Start</TableCell>
                     <TableCell>Actions</TableCell>
@@ -507,6 +664,20 @@ export default function Equipment() {
                       <TableCell>{equipment.find((e) => e.id === b.equipment_id)?.name || 'N/A'}</TableCell>
                       <TableCell>{b.operator_id}</TableCell>
                       <TableCell>
+                        {(() => {
+                          const bookedEquipment = equipment.find((e) => e.id === b.equipment_id)
+                          if (!bookedEquipment?.requires_certification) {
+                            return <Chip label="Not required" size="small" />
+                          }
+                          const certified = certifications.some(
+                            (c) => c.operator_id === b.operator_id && c.equipment_type === bookedEquipment.equipment_type && c.is_active,
+                          )
+                          return (
+                            <Chip label={certified ? 'Certified' : 'Not certified'} color={certified ? 'success' : 'error'} size="small" />
+                          )
+                        })()}
+                      </TableCell>
+                      <TableCell>
                         <Chip label={b.status} size="small" color={b.status === 'ACTIVE' ? 'warning' : b.status === 'COMPLETED' ? 'success' : 'default'} />
                       </TableCell>
                       <TableCell>{new Date(b.start_time).toLocaleString()}</TableCell>
@@ -514,6 +685,21 @@ export default function Equipment() {
                         <Stack direction="row" spacing={1}>
                           {b.status === 'REQUESTED' && (
                             <Button size="small" onClick={() => approveBookingMutation.mutate(b.id)}>Approve</Button>
+                          )}
+                          {b.status === 'REQUESTED' && (
+                            <Button size="small" color="error" onClick={() => updateBookingStatusMutation.mutate({ id: b.id, status: 'CANCELLED' })}>
+                              Reject
+                            </Button>
+                          )}
+                          {b.status === 'APPROVED' && (
+                            <Button size="small" onClick={() => updateBookingStatusMutation.mutate({ id: b.id, status: 'ACTIVE' })}>
+                              Start
+                            </Button>
+                          )}
+                          {b.status === 'ACTIVE' && (
+                            <Button size="small" onClick={() => updateBookingStatusMutation.mutate({ id: b.id, status: 'COMPLETED' })}>
+                              Complete
+                            </Button>
                           )}
                           {b.status !== 'COMPLETED' && b.status !== 'CANCELLED' && (
                             <FormControl size="small" sx={{ minWidth: 140 }}>
@@ -532,7 +718,7 @@ export default function Equipment() {
                     </TableRow>
                   ))}
                   {bookings.length === 0 && (
-                    <TableRow><TableCell colSpan={6} align="center">No bookings</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} align="center">No bookings</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -609,6 +795,7 @@ export default function Equipment() {
                     <TableCell>Scheduled</TableCell>
                     <TableCell>Completed</TableCell>
                     <TableCell>Cost</TableCell>
+                    <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -621,10 +808,15 @@ export default function Equipment() {
                       <TableCell>{new Date(m.scheduled_date).toLocaleDateString()}</TableCell>
                       <TableCell>{m.completed_date ? new Date(m.completed_date).toLocaleDateString() : '-'}</TableCell>
                       <TableCell>{m.cost ? `₹${m.cost}` : '-'}</TableCell>
+                      <TableCell>
+                        {m.completed_date ? '-' : (
+                          <Button size="small" onClick={() => openCompleteMaintenance(m.id)}>Mark Complete</Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                   {maintenance.length === 0 && (
-                    <TableRow><TableCell colSpan={5} align="center">No maintenance records</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} align="center">No maintenance records</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -777,6 +969,49 @@ export default function Equipment() {
       {activeTab === 2 && renderBookingsTab()}
       {activeTab === 3 && renderMaintenanceTab()}
       {activeTab === 4 && renderCertificationsTab()}
+
+      <Dialog open={maintenanceCompleteOpen} onClose={() => setMaintenanceCompleteOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Complete Maintenance</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Completed Date"
+              type="date"
+              InputLabelProps={{ shrink: true }}
+              value={maintenanceCompleteForm.completed_date}
+              onChange={(e) => setMaintenanceCompleteForm((p) => ({ ...p, completed_date: e.target.value }))}
+            />
+            <TextField
+              label="Performed By"
+              value={maintenanceCompleteForm.performed_by}
+              onChange={(e) => setMaintenanceCompleteForm((p) => ({ ...p, performed_by: e.target.value }))}
+            />
+            <TextField
+              label="Cost"
+              type="number"
+              value={maintenanceCompleteForm.cost ?? ''}
+              onChange={(e) => setMaintenanceCompleteForm((p) => ({ ...p, cost: e.target.value ? Number(e.target.value) : undefined }))}
+            />
+            <TextField
+              label="Notes"
+              multiline
+              minRows={2}
+              value={maintenanceCompleteForm.notes}
+              onChange={(e) => setMaintenanceCompleteForm((p) => ({ ...p, notes: e.target.value }))}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMaintenanceCompleteOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleCompleteMaintenance}
+            disabled={updateMaintenanceMutation.isPending || !maintenanceCompleteForm.completed_date}
+          >
+            {updateMaintenanceMutation.isPending ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
