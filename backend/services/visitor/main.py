@@ -250,7 +250,7 @@ async def update_visitor_request(
 @app.post("/requests/{request_id}/approve")
 async def approve_request(
     request_id: str,
-    level: str = Query(..., description="sponsor, safety, or security"),
+    level: str = Query(..., description="sponsor, safety, security, or final"),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -264,6 +264,10 @@ async def approve_request(
     elif level == "safety":
         request.approved_by_safety = True
     elif level == "security":
+        request.approved_by_security = True
+    elif level == "final":
+        request.approved_by_sponsor = True
+        request.approved_by_safety = True
         request.approved_by_security = True
     else:
         raise HTTPException(status_code=400, detail="Invalid approval level")
@@ -284,6 +288,26 @@ async def approve_request(
     db.refresh(request)
     
     return {"message": f"Request approved at {level} level", "request": request}
+
+
+@app.post("/requests/{request_id}/reject")
+async def reject_request(
+    request_id: str,
+    reason: str = Query(..., description="Rejection reason"),
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Reject visitor request"""
+    request = db.query(VisitorRequest).filter(VisitorRequest.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    request.status = RequestStatus.REJECTED
+    request.rejection_reason = reason
+    request.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(request)
+    return {"message": "Request rejected", "request": request}
 
 
 # ========== Safety Training Endpoints ==========

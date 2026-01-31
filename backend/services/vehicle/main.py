@@ -32,6 +32,12 @@ app = FastAPI(title="Vehicle Requisition Service", version="1.0.0")
 setup_middleware(app)
 
 
+def _get_user_id(current_user: User) -> str:
+    if isinstance(current_user, dict):
+        return current_user.get("id")
+    return getattr(current_user, "id", None)
+
+
 def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
 
@@ -176,8 +182,16 @@ async def create_requisition(requisition_data: RequisitionCreate, db: Session = 
     year = datetime.now().year
     count = db.query(VehicleRequisition).filter(VehicleRequisition.requisition_number.like(f"VR{year}%")).count()
     requisition_number = f"VR{year}{count + 1:06d}"
-    
-    requisition = VehicleRequisition(**requisition_data.model_dump(), requisition_number=requisition_number, requester_id=current_user.id)
+
+    requester_id = _get_user_id(current_user)
+    if not requester_id:
+        raise HTTPException(status_code=401, detail="Invalid user")
+
+    requisition = VehicleRequisition(
+        **requisition_data.model_dump(),
+        requisition_number=requisition_number,
+        requester_id=requester_id,
+    )
     db.add(requisition)
     db.commit()
     db.refresh(requisition)
@@ -195,10 +209,13 @@ async def approve_requisition(requisition_id: str, vehicle_id: str, db: Session 
     requisition = db.query(VehicleRequisition).filter(VehicleRequisition.id == requisition_id).first()
     if not requisition:
         raise HTTPException(status_code=404, detail="Requisition not found")
-    
+    approver_id = _get_user_id(current_user)
+    if not approver_id:
+        raise HTTPException(status_code=401, detail="Invalid user")
+
     requisition.status = RequisitionStatus.APPROVED
     requisition.vehicle_id = vehicle_id
-    requisition.approver_id = current_user.id
+    requisition.approver_id = approver_id
     requisition.approved_at = datetime.now()
     db.commit()
     return {"message": "Requisition approved", "requisition_id": requisition_id}
@@ -264,7 +281,11 @@ async def create_fuel_log(log_data: FuelLogCreate, db: Session = Depends(get_db)
 # Feedback
 @app.post("/feedback", response_model=FeedbackResponse)
 async def create_feedback(feedback_data: FeedbackCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    feedback = TripFeedback(**feedback_data.model_dump(), submitted_by_id=current_user.id)
+    submitted_by_id = _get_user_id(current_user)
+    if not submitted_by_id:
+        raise HTTPException(status_code=401, detail="Invalid user")
+
+    feedback = TripFeedback(**feedback_data.model_dump(), submitted_by_id=submitted_by_id)
     db.add(feedback)
     
     # Update driver rating

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from typing import Optional
 from datetime import datetime
 from enum import Enum
@@ -31,13 +31,13 @@ class TripStatus(str, Enum):
 
 # Vehicle Schemas
 class VehicleBase(BaseModel):
-    registration_number: str
+    registration_number: str = Field(..., min_length=1, max_length=50)
     vehicle_type: VehicleType
-    make: Optional[str] = None
-    model: Optional[str] = None
-    year: Optional[int] = None
-    capacity: Optional[int] = None
-    fuel_type: Optional[str] = None
+    make: Optional[str] = Field(None, min_length=1, max_length=100)
+    model: Optional[str] = Field(None, min_length=1, max_length=100)
+    year: Optional[int] = Field(None, ge=1900, le=2100)
+    capacity: Optional[int] = Field(None, ge=1)
+    fuel_type: Optional[str] = Field(None, min_length=1, max_length=50)
 
 class VehicleCreate(VehicleBase):
     pass
@@ -53,12 +53,12 @@ class VehicleResponse(VehicleBase):
 
 # Driver Schemas
 class DriverBase(BaseModel):
-    license_number: str
+    license_number: str = Field(..., min_length=1, max_length=100)
     license_expiry: datetime
-    license_type: Optional[str] = None
+    license_type: Optional[str] = Field(None, min_length=1, max_length=50)
 
 class DriverCreate(DriverBase):
-    user_id: str
+    user_id: str = Field(..., min_length=1)
 
 class DriverResponse(DriverBase):
     id: str
@@ -73,13 +73,20 @@ class DriverResponse(DriverBase):
 
 # Requisition Schemas
 class RequisitionBase(BaseModel):
-    purpose: str
-    destination: str
+    purpose: str = Field(..., min_length=1, max_length=200)
+    destination: str = Field(..., min_length=1, max_length=200)
     departure_date: datetime
     return_date: Optional[datetime] = None
-    number_of_passengers: int = 1
-    cost_center: Optional[str] = None
-    notes: Optional[str] = None
+    number_of_passengers: int = Field(1, ge=1)
+    cost_center: Optional[str] = Field(None, min_length=1, max_length=100)
+    notes: Optional[str] = Field(None, min_length=1)
+
+    @validator("return_date")
+    def validate_return_date(cls, value, values):
+        departure_date = values.get("departure_date")
+        if value and departure_date and value < departure_date:
+            raise ValueError("return_date must be on or after departure_date")
+        return value
 
 class RequisitionCreate(RequisitionBase):
     pass
@@ -100,14 +107,14 @@ class RequisitionResponse(RequisitionBase):
 
 # Trip Schemas
 class TripBase(BaseModel):
-    driver_id: str
+    driver_id: str = Field(..., min_length=1)
 
 class TripCreate(TripBase):
-    requisition_id: str
+    requisition_id: str = Field(..., min_length=1)
 
 class TripUpdate(BaseModel):
-    start_odometer: Optional[float] = None
-    end_odometer: Optional[float] = None
+    start_odometer: Optional[float] = Field(None, ge=0)
+    end_odometer: Optional[float] = Field(None, ge=0)
     status: Optional[TripStatus] = None
 
 class TripResponse(TripBase):
@@ -126,14 +133,14 @@ class TripResponse(TripBase):
 
 # Fuel Log Schemas
 class FuelLogBase(BaseModel):
-    fuel_quantity: float
-    fuel_cost: float
-    odometer_reading: float
-    fuel_station: Optional[str] = None
-    receipt_number: Optional[str] = None
+    fuel_quantity: float = Field(..., ge=0)
+    fuel_cost: float = Field(..., ge=0)
+    odometer_reading: float = Field(..., ge=0)
+    fuel_station: Optional[str] = Field(None, min_length=1, max_length=200)
+    receipt_number: Optional[str] = Field(None, min_length=1, max_length=100)
 
 class FuelLogCreate(FuelLogBase):
-    trip_id: str
+    trip_id: str = Field(..., min_length=1)
 
 class FuelLogResponse(FuelLogBase):
     id: str
@@ -146,12 +153,12 @@ class FuelLogResponse(FuelLogBase):
 
 # Feedback Schemas
 class FeedbackBase(BaseModel):
-    driver_rating: int
-    vehicle_rating: int
-    comments: Optional[str] = None
+    driver_rating: int = Field(..., ge=1, le=5)
+    vehicle_rating: int = Field(..., ge=1, le=5)
+    comments: Optional[str] = Field(None, min_length=1)
 
 class FeedbackCreate(FeedbackBase):
-    trip_id: str
+    trip_id: str = Field(..., min_length=1)
 
 class FeedbackResponse(FeedbackBase):
     id: str

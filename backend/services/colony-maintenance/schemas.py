@@ -16,35 +16,35 @@ class RequestStatusEnum(str, Enum):
 
 # Maintenance Request Schemas
 class MaintenanceRequestCreate(BaseModel):
-    quarter_number: str
-    category: str
-    sub_category: Optional[str] = None
-    description: str
-    priority: str = "medium"
+    quarter_number: str = Field(..., min_length=1, max_length=50)
+    category: str = Field(..., min_length=1, max_length=100)
+    sub_category: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: str = Field(..., min_length=1)
+    priority: str = Field("medium", min_length=1, max_length=20)
 
 
 class MaintenanceRequestUpdate(BaseModel):
-    category: Optional[str] = None
-    sub_category: Optional[str] = None
-    description: Optional[str] = None
-    priority: Optional[str] = None
+    category: Optional[str] = Field(None, min_length=1, max_length=100)
+    sub_category: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = Field(None, min_length=1)
+    priority: Optional[str] = Field(None, min_length=1, max_length=20)
     status: Optional[RequestStatusEnum] = None
-    estimated_cost: Optional[float] = None
-    actual_cost: Optional[float] = None
-    resolution_notes: Optional[str] = None
+    estimated_cost: Optional[float] = Field(None, ge=0)
+    actual_cost: Optional[float] = Field(None, ge=0)
+    resolution_notes: Optional[str] = Field(None, min_length=1)
 
 
 class MaintenanceRequestAssign(BaseModel):
-    assigned_vendor_id: Optional[str] = None
-    assigned_technician_id: Optional[str] = None
+    assigned_vendor_id: Optional[str] = Field(None, min_length=1)
+    assigned_technician_id: Optional[str] = Field(None, min_length=1)
     requires_approval: Optional[bool] = None
-    estimated_cost: Optional[float] = None
+    estimated_cost: Optional[float] = Field(None, ge=0)
 
 
 class MaintenanceStatusChange(BaseModel):
     status: RequestStatusEnum
-    notes: Optional[str] = None
-    actual_cost: Optional[float] = None
+    notes: Optional[str] = Field(None, min_length=1)
+    actual_cost: Optional[float] = Field(None, ge=0)
 
 
 class MaintenanceRequestResponse(BaseModel):
@@ -83,19 +83,19 @@ class RequestStatusHistoryResponse(BaseModel):
 
 # Vendor Schemas
 class VendorCreate(BaseModel):
-    name: str
-    company_name: Optional[str] = None
-    email: Optional[str] = None
-    phone: str
-    service_categories: str
+    name: str = Field(..., min_length=1, max_length=200)
+    company_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    email: Optional[str] = Field(None, min_length=1, max_length=255)
+    phone: str = Field(..., min_length=1, max_length=20)
+    service_categories: str = Field(..., min_length=1)
 
 
 class VendorUpdate(BaseModel):
-    name: Optional[str] = None
-    company_name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    service_categories: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    company_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    email: Optional[str] = Field(None, min_length=1, max_length=255)
+    phone: Optional[str] = Field(None, min_length=1, max_length=20)
+    service_categories: Optional[str] = Field(None, min_length=1)
     is_active: Optional[bool] = None
 
 
@@ -117,24 +117,24 @@ class VendorResponse(BaseModel):
 
 # Asset Schemas
 class AssetCreate(BaseModel):
-    asset_number: str
-    asset_type: str
-    quarter_number: str
-    make: Optional[str] = None
-    model: Optional[str] = None
-    serial_number: Optional[str] = None
+    asset_number: str = Field(..., min_length=1, max_length=50)
+    asset_type: str = Field(..., min_length=1, max_length=100)
+    quarter_number: str = Field(..., min_length=1, max_length=50)
+    make: Optional[str] = Field(None, min_length=1, max_length=100)
+    model: Optional[str] = Field(None, min_length=1, max_length=100)
+    serial_number: Optional[str] = Field(None, min_length=1, max_length=100)
     installation_date: Optional[datetime] = None
     warranty_expiry: Optional[datetime] = None
     amc_start_date: Optional[datetime] = None
     amc_end_date: Optional[datetime] = None
-    amc_vendor: Optional[str] = None
+    amc_vendor: Optional[str] = Field(None, min_length=1, max_length=200)
 
 
 class AssetUpdate(BaseModel):
-    asset_type: Optional[str] = None
-    make: Optional[str] = None
-    model: Optional[str] = None
-    status: Optional[str] = None
+    asset_type: Optional[str] = Field(None, min_length=1, max_length=100)
+    make: Optional[str] = Field(None, min_length=1, max_length=100)
+    model: Optional[str] = Field(None, min_length=1, max_length=100)
+    status: Optional[str] = Field(None, min_length=1, max_length=50)
     warranty_expiry: Optional[datetime] = None
     amc_start_date: Optional[datetime] = None
     amc_end_date: Optional[datetime] = None
@@ -161,17 +161,17 @@ class AssetResponse(BaseModel):
 
 # Service Category Schemas
 class ServiceCategoryCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    sla_hours: int = 24
-    icon: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1)
+    sla_hours: int = Field(24, ge=1)
+    icon: Optional[str] = Field(None, min_length=1, max_length=200)
     is_active: bool = True
 
 
 class ServiceCategoryUpdate(BaseModel):
-    description: Optional[str] = None
-    sla_hours: Optional[int] = None
-    icon: Optional[str] = None
+    description: Optional[str] = Field(None, min_length=1)
+    sla_hours: Optional[int] = Field(None, ge=1)
+    icon: Optional[str] = Field(None, min_length=1, max_length=200)
     is_active: Optional[bool] = None
 
 
@@ -190,27 +190,27 @@ class ServiceCategoryResponse(BaseModel):
 
 # Feedback Schema
 class FeedbackCreate(BaseModel):
-    request_id: str
+    request_id: str = Field(..., min_length=1)
     rating: int = Field(..., ge=1, le=5)
-    feedback: Optional[str] = None
+    feedback: Optional[str] = Field(None, min_length=1)
 
 
 # Recurring Maintenance Schemas
 class RecurringMaintenanceCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    category: str
-    frequency: str  # monthly, quarterly, annual
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1)
+    category: str = Field(..., min_length=1, max_length=100)
+    frequency: str = Field(..., min_length=1, max_length=50)  # monthly, quarterly, annual
     next_schedule_date: datetime
-    assigned_vendor_id: Optional[str] = None
+    assigned_vendor_id: Optional[str] = Field(None, min_length=1)
     is_active: bool = True
 
 
 class RecurringMaintenanceUpdate(BaseModel):
-    description: Optional[str] = None
-    frequency: Optional[str] = None
+    description: Optional[str] = Field(None, min_length=1)
+    frequency: Optional[str] = Field(None, min_length=1, max_length=50)
     next_schedule_date: Optional[datetime] = None
-    assigned_vendor_id: Optional[str] = None
+    assigned_vendor_id: Optional[str] = Field(None, min_length=1)
     is_active: Optional[bool] = None
 
 
@@ -231,19 +231,19 @@ class RecurringMaintenanceResponse(BaseModel):
 
 # Technician Schemas
 class TechnicianCreate(BaseModel):
-    name: str
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    specialization: Optional[str] = None
-    vendor_id: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=200)
+    phone: Optional[str] = Field(None, min_length=1, max_length=20)
+    email: Optional[str] = Field(None, min_length=1, max_length=255)
+    specialization: Optional[str] = Field(None, min_length=1, max_length=200)
+    vendor_id: Optional[str] = Field(None, min_length=1)
 
 
 class TechnicianUpdate(BaseModel):
-    name: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
-    specialization: Optional[str] = None
-    vendor_id: Optional[str] = None
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    phone: Optional[str] = Field(None, min_length=1, max_length=20)
+    email: Optional[str] = Field(None, min_length=1, max_length=255)
+    specialization: Optional[str] = Field(None, min_length=1, max_length=200)
+    vendor_id: Optional[str] = Field(None, min_length=1)
     is_active: Optional[bool] = None
 
 

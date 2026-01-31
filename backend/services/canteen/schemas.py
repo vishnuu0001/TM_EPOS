@@ -43,30 +43,30 @@ class InventoryStatusEnum(str, Enum):
 
 # Worker Schemas
 class WorkerCreate(BaseModel):
-    full_name: str
-    employee_id: str
-    phone: Optional[str] = None
-    email: Optional[str] = None
+    full_name: str = Field(..., min_length=1, max_length=200)
+    employee_id: str = Field(..., min_length=1, max_length=50)
+    phone: Optional[str] = Field(None, min_length=1, max_length=20)
+    email: Optional[str] = Field(None, min_length=1, max_length=255)
     worker_type: WorkerTypeEnum
-    department: Optional[str] = None
-    designation: Optional[str] = None
-    contractor_name: Optional[str] = None
-    meal_entitlement: Optional[str] = None
+    department: Optional[str] = Field(None, min_length=1, max_length=100)
+    designation: Optional[str] = Field(None, min_length=1, max_length=100)
+    contractor_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    meal_entitlement: Optional[str] = Field(None, min_length=1)
     subsidy_applicable: bool = True
 
 
 class WorkerUpdate(BaseModel):
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
-    email: Optional[str] = None
+    full_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    phone: Optional[str] = Field(None, min_length=1, max_length=20)
+    email: Optional[str] = Field(None, min_length=1, max_length=255)
     worker_type: Optional[WorkerTypeEnum] = None
-    department: Optional[str] = None
-    designation: Optional[str] = None
-    contractor_name: Optional[str] = None
+    department: Optional[str] = Field(None, min_length=1, max_length=100)
+    designation: Optional[str] = Field(None, min_length=1, max_length=100)
+    contractor_name: Optional[str] = Field(None, min_length=1, max_length=200)
     is_active: Optional[bool] = None
     canteen_access: Optional[bool] = None
-    meal_entitlement: Optional[str] = None
-    wallet_balance: Optional[float] = None
+    meal_entitlement: Optional[str] = Field(None, min_length=1)
+    wallet_balance: Optional[float] = Field(None, ge=0)
     subsidy_applicable: Optional[bool] = None
 
 
@@ -100,13 +100,13 @@ class WorkerResponse(BaseModel):
 class MenuCreate(BaseModel):
     menu_date: date
     meal_type: MealTypeEnum
-    menu_name: Optional[str] = None
-    description: Optional[str] = None
+    menu_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1)
 
 
 class MenuUpdate(BaseModel):
-    menu_name: Optional[str] = None
-    description: Optional[str] = None
+    menu_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1)
     is_active: Optional[bool] = None
     is_published: Optional[bool] = None
 
@@ -129,38 +129,38 @@ class MenuResponse(BaseModel):
 
 # Menu Item Schemas
 class MenuItemCreate(BaseModel):
-    menu_id: str
-    item_name: str
-    item_name_hindi: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[str] = None
-    base_price: float = 0.0
-    subsidized_price: float = 0.0
-    quantity_prepared: int = 0
-    calories: Optional[int] = None
+    menu_id: str = Field(..., min_length=1)
+    item_name: str = Field(..., min_length=1, max_length=200)
+    item_name_hindi: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1)
+    category: Optional[str] = Field(None, min_length=1, max_length=100)
+    base_price: float = Field(0.0, ge=0)
+    subsidized_price: float = Field(0.0, ge=0)
+    quantity_prepared: int = Field(0, ge=0)
+    calories: Optional[int] = Field(None, ge=0)
     is_vegetarian: bool = True
     is_vegan: bool = False
-    contains_allergens: Optional[str] = None
-    image_url: Optional[str] = None
-    display_order: int = 0
+    contains_allergens: Optional[str] = Field(None, min_length=1)
+    image_url: Optional[str] = Field(None, min_length=1, max_length=500)
+    display_order: int = Field(0, ge=0)
 
 
 class MenuItemUpdate(BaseModel):
-    item_name: Optional[str] = None
-    item_name_hindi: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[str] = None
-    base_price: Optional[float] = None
-    subsidized_price: Optional[float] = None
+    item_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    item_name_hindi: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1)
+    category: Optional[str] = Field(None, min_length=1, max_length=100)
+    base_price: Optional[float] = Field(None, ge=0)
+    subsidized_price: Optional[float] = Field(None, ge=0)
     is_available: Optional[bool] = None
-    quantity_prepared: Optional[int] = None
-    quantity_remaining: Optional[int] = None
-    calories: Optional[int] = None
+    quantity_prepared: Optional[int] = Field(None, ge=0)
+    quantity_remaining: Optional[int] = Field(None, ge=0)
+    calories: Optional[int] = Field(None, ge=0)
     is_vegetarian: Optional[bool] = None
     is_vegan: Optional[bool] = None
-    contains_allergens: Optional[str] = None
-    image_url: Optional[str] = None
-    display_order: Optional[int] = None
+    contains_allergens: Optional[str] = Field(None, min_length=1)
+    image_url: Optional[str] = Field(None, min_length=1, max_length=500)
+    display_order: Optional[int] = Field(None, ge=0)
 
 
 class MenuItemResponse(BaseModel):
@@ -190,22 +190,22 @@ class MenuItemResponse(BaseModel):
 
 # Order Schemas
 class OrderCreate(BaseModel):
-    worker_id: str
-    menu_id: str
+    worker_id: str = Field(..., min_length=1)
+    menu_id: str = Field(..., min_length=1)
     meal_type: MealTypeEnum
-    items: str  # JSON string
-    total_amount: float
-    subsidy_amount: float = 0.0
-    payable_amount: float
-    payment_method: Optional[str] = "wallet"
-    kiosk_id: Optional[str] = None
+    items: str = Field(..., min_length=1)  # JSON string
+    total_amount: float = Field(..., ge=0)
+    subsidy_amount: float = Field(0.0, ge=0)
+    payable_amount: float = Field(..., ge=0)
+    payment_method: Optional[str] = Field("wallet", min_length=1, max_length=50)
+    kiosk_id: Optional[str] = Field(None, min_length=1, max_length=100)
 
 
 class OrderUpdate(BaseModel):
     status: Optional[OrderStatusEnum] = None
     payment_status: Optional[PaymentStatusEnum] = None
-    counter_number: Optional[str] = None
-    cancellation_reason: Optional[str] = None
+    counter_number: Optional[str] = Field(None, min_length=1, max_length=50)
+    cancellation_reason: Optional[str] = Field(None, min_length=1)
 
 
 class OrderResponse(BaseModel):
@@ -241,15 +241,15 @@ class OrderResponse(BaseModel):
 
 # Consumption Schemas
 class ConsumptionCreate(BaseModel):
-    order_id: str
-    worker_id: str
+    order_id: str = Field(..., min_length=1)
+    worker_id: str = Field(..., min_length=1)
     meal_type: MealTypeEnum
     consumption_date: date
-    items_ordered: str
-    items_consumed: Optional[str] = None
-    items_wasted: Optional[str] = None
-    wastage_percentage: float = 0.0
-    wastage_reason: Optional[str] = None
+    items_ordered: str = Field(..., min_length=1)
+    items_consumed: Optional[str] = Field(None, min_length=1)
+    items_wasted: Optional[str] = Field(None, min_length=1)
+    wastage_percentage: float = Field(0.0, ge=0, le=100)
+    wastage_reason: Optional[str] = Field(None, min_length=1)
     meal_completed: bool = True
 
 
@@ -274,24 +274,24 @@ class ConsumptionResponse(BaseModel):
 
 # Feedback Schemas
 class FeedbackCreate(BaseModel):
-    worker_id: str
+    worker_id: str = Field(..., min_length=1)
     meal_type: MealTypeEnum
-    food_quality_rating: Optional[int] = None
-    taste_rating: Optional[int] = None
-    quantity_rating: Optional[int] = None
-    hygiene_rating: Optional[int] = None
-    service_rating: Optional[int] = None
-    overall_rating: Optional[int] = None
-    comments: Optional[str] = None
-    suggestions: Optional[str] = None
+    food_quality_rating: Optional[int] = Field(None, ge=1, le=5)
+    taste_rating: Optional[int] = Field(None, ge=1, le=5)
+    quantity_rating: Optional[int] = Field(None, ge=1, le=5)
+    hygiene_rating: Optional[int] = Field(None, ge=1, le=5)
+    service_rating: Optional[int] = Field(None, ge=1, le=5)
+    overall_rating: Optional[int] = Field(None, ge=1, le=5)
+    comments: Optional[str] = Field(None, min_length=1)
+    suggestions: Optional[str] = Field(None, min_length=1)
     complaint: bool = False
-    complaint_category: Optional[str] = None
-    complaint_description: Optional[str] = None
+    complaint_category: Optional[str] = Field(None, min_length=1)
+    complaint_description: Optional[str] = Field(None, min_length=1)
 
 
 class FeedbackUpdate(BaseModel):
     responded: Optional[bool] = None
-    response_text: Optional[str] = None
+    response_text: Optional[str] = Field(None, min_length=1)
 
 
 class FeedbackResponse(BaseModel):
@@ -323,37 +323,37 @@ class FeedbackResponse(BaseModel):
 
 # Inventory Schemas
 class InventoryCreate(BaseModel):
-    item_name: str
-    item_name_hindi: Optional[str] = None
-    category: Optional[str] = None
-    unit: str
-    current_stock: float = 0.0
-    minimum_stock: float = 0.0
-    maximum_stock: float = 0.0
-    reorder_level: float = 0.0
-    unit_price: float = 0.0
-    supplier_name: Optional[str] = None
-    supplier_contact: Optional[str] = None
+    item_name: str = Field(..., min_length=1, max_length=200)
+    item_name_hindi: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[str] = Field(None, min_length=1, max_length=100)
+    unit: str = Field(..., min_length=1, max_length=50)
+    current_stock: float = Field(0.0, ge=0)
+    minimum_stock: float = Field(0.0, ge=0)
+    maximum_stock: float = Field(0.0, ge=0)
+    reorder_level: float = Field(0.0, ge=0)
+    unit_price: float = Field(0.0, ge=0)
+    supplier_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    supplier_contact: Optional[str] = Field(None, min_length=1, max_length=100)
     is_perishable: bool = False
     expiry_date: Optional[date] = None
 
 
 class InventoryUpdate(BaseModel):
-    item_name: Optional[str] = None
-    item_name_hindi: Optional[str] = None
-    category: Optional[str] = None
-    unit: Optional[str] = None
-    current_stock: Optional[float] = None
-    minimum_stock: Optional[float] = None
-    maximum_stock: Optional[float] = None
-    reorder_level: Optional[float] = None
+    item_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    item_name_hindi: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[str] = Field(None, min_length=1, max_length=100)
+    unit: Optional[str] = Field(None, min_length=1, max_length=50)
+    current_stock: Optional[float] = Field(None, ge=0)
+    minimum_stock: Optional[float] = Field(None, ge=0)
+    maximum_stock: Optional[float] = Field(None, ge=0)
+    reorder_level: Optional[float] = Field(None, ge=0)
     status: Optional[InventoryStatusEnum] = None
-    unit_price: Optional[float] = None
-    total_value: Optional[float] = None
-    supplier_name: Optional[str] = None
-    supplier_contact: Optional[str] = None
+    unit_price: Optional[float] = Field(None, ge=0)
+    total_value: Optional[float] = Field(None, ge=0)
+    supplier_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    supplier_contact: Optional[str] = Field(None, min_length=1, max_length=100)
     last_purchase_date: Optional[date] = None
-    last_purchase_quantity: Optional[float] = None
+    last_purchase_quantity: Optional[float] = Field(None, ge=0)
     is_perishable: Optional[bool] = None
     expiry_date: Optional[date] = None
 
@@ -388,15 +388,15 @@ class InventoryResponse(BaseModel):
 
 # Kiosk Order
 class KioskOrderItem(BaseModel):
-    item_id: str
-    quantity: int = 1
+    item_id: str = Field(..., min_length=1)
+    quantity: int = Field(1, ge=1)
 
 
 class KioskOrderCreate(BaseModel):
-    biometric_id: str
-    menu_id: str
+    biometric_id: str = Field(..., min_length=1)
+    menu_id: str = Field(..., min_length=1)
     meal_type: MealTypeEnum
-    items: List[KioskOrderItem]
+    items: List[KioskOrderItem] = Field(..., min_items=1)
 
 
 # Dashboard Stats

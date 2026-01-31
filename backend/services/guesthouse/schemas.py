@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -25,24 +25,24 @@ class BookingStatus(str, Enum):
 
 # Room Schemas
 class RoomBase(BaseModel):
-    room_number: str
+    room_number: str = Field(..., min_length=1, max_length=50)
     room_type: RoomType
-    floor: int
-    capacity: int
-    amenities: Optional[str] = None
-    rate_per_night: float
-    description: Optional[str] = None
+    floor: int = Field(..., ge=0)
+    capacity: int = Field(..., ge=1)
+    amenities: Optional[str] = Field(None, min_length=1)
+    rate_per_night: float = Field(..., ge=0)
+    description: Optional[str] = Field(None, min_length=1)
 
 class RoomCreate(RoomBase):
     pass
 
 class RoomUpdate(BaseModel):
     room_type: Optional[RoomType] = None
-    capacity: Optional[int] = None
-    amenities: Optional[str] = None
-    rate_per_night: Optional[float] = None
+    capacity: Optional[int] = Field(None, ge=1)
+    amenities: Optional[str] = Field(None, min_length=1)
+    rate_per_night: Optional[float] = Field(None, ge=0)
     status: Optional[RoomStatus] = None
-    description: Optional[str] = None
+    description: Optional[str] = Field(None, min_length=1)
 
 class RoomResponse(RoomBase):
     id: str
@@ -55,17 +55,24 @@ class RoomResponse(RoomBase):
 
 # Booking Schemas
 class BookingBase(BaseModel):
-    guest_name: str
-    guest_phone: str
+    guest_name: str = Field(..., min_length=1, max_length=200)
+    guest_phone: str = Field(..., min_length=1, max_length=20)
     guest_email: Optional[EmailStr] = None
-    guest_company: Optional[str] = None
-    guest_id_proof: Optional[str] = None
+    guest_company: Optional[str] = Field(None, min_length=1, max_length=200)
+    guest_id_proof: Optional[str] = Field(None, min_length=1, max_length=200)
     check_in_date: datetime
     check_out_date: datetime
-    number_of_guests: int = 1
-    cost_center: str
-    purpose: Optional[str] = None
-    special_requests: Optional[str] = None
+    number_of_guests: int = Field(1, ge=1)
+    cost_center: str = Field(..., min_length=1, max_length=100)
+    purpose: Optional[str] = Field(None, min_length=1)
+    special_requests: Optional[str] = Field(None, min_length=1)
+
+    @validator("check_out_date")
+    def validate_check_out_date(cls, value, values):
+        check_in = values.get("check_in_date")
+        if check_in and value <= check_in:
+            raise ValueError("check_out_date must be after check_in_date")
+        return value
 
 class BookingCreate(BookingBase):
     room_id: str
@@ -73,10 +80,10 @@ class BookingCreate(BookingBase):
 class BookingUpdate(BaseModel):
     check_in_date: Optional[datetime] = None
     check_out_date: Optional[datetime] = None
-    number_of_guests: Optional[int] = None
+    number_of_guests: Optional[int] = Field(None, ge=1)
     status: Optional[BookingStatus] = None
-    special_requests: Optional[str] = None
-    notes: Optional[str] = None
+    special_requests: Optional[str] = Field(None, min_length=1)
+    notes: Optional[str] = Field(None, min_length=1)
 
 class BookingResponse(BookingBase):
     id: str
@@ -96,32 +103,32 @@ class BookingResponse(BookingBase):
 
 # Check-in/Check-out Schemas
 class CheckInRequest(BaseModel):
-    booking_id: str
+    booking_id: str = Field(..., min_length=1)
     actual_check_in: Optional[datetime] = None
 
 class CheckOutRequest(BaseModel):
-    booking_id: str
+    booking_id: str = Field(..., min_length=1)
     actual_check_out: Optional[datetime] = None
-    room_condition_notes: Optional[str] = None
+    room_condition_notes: Optional[str] = Field(None, min_length=1)
 
 # Billing Schemas
 class BillingBase(BaseModel):
-    room_charges: float = 0.0
-    meal_charges: float = 0.0
-    extra_service_charges: float = 0.0
-    tax_amount: float = 0.0
-    discount: float = 0.0
+    room_charges: float = Field(0.0, ge=0)
+    meal_charges: float = Field(0.0, ge=0)
+    extra_service_charges: float = Field(0.0, ge=0)
+    tax_amount: float = Field(0.0, ge=0)
+    discount: float = Field(0.0, ge=0)
 
 class BillingCreate(BillingBase):
-    booking_id: str
+    booking_id: str = Field(..., min_length=1)
 
 class BillingUpdate(BaseModel):
-    meal_charges: Optional[float] = None
-    extra_service_charges: Optional[float] = None
-    discount: Optional[float] = None
+    meal_charges: Optional[float] = Field(None, ge=0)
+    extra_service_charges: Optional[float] = Field(None, ge=0)
+    discount: Optional[float] = Field(None, ge=0)
     paid: Optional[bool] = None
-    payment_method: Optional[str] = None
-    transaction_id: Optional[str] = None
+    payment_method: Optional[str] = Field(None, min_length=1, max_length=50)
+    transaction_id: Optional[str] = Field(None, min_length=1, max_length=100)
 
 class BillingResponse(BillingBase):
     id: str
@@ -139,16 +146,16 @@ class BillingResponse(BillingBase):
 
 # Housekeeping Schemas
 class HousekeepingBase(BaseModel):
-    task_type: str
-    task_description: Optional[str] = None
+    task_type: str = Field(..., min_length=1, max_length=100)
+    task_description: Optional[str] = Field(None, min_length=1)
 
 class HousekeepingCreate(HousekeepingBase):
-    room_id: str
+    room_id: str = Field(..., min_length=1)
 
 class HousekeepingUpdate(BaseModel):
-    assigned_to_id: Optional[str] = None
-    status: Optional[str] = None
-    remarks: Optional[str] = None
+    assigned_to_id: Optional[str] = Field(None, min_length=1)
+    status: Optional[str] = Field(None, min_length=1, max_length=50)
+    remarks: Optional[str] = Field(None, min_length=1)
 
 class HousekeepingResponse(HousekeepingBase):
     id: str

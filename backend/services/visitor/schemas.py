@@ -45,33 +45,33 @@ class EntryExitTypeEnum(str, Enum):
 
 # Visitor Request Schemas
 class VisitorRequestCreate(BaseModel):
-    visitor_name: str
-    visitor_company: Optional[str] = None
-    visitor_phone: str
-    visitor_email: Optional[str] = None
+    visitor_name: str = Field(..., min_length=1, max_length=200)
+    visitor_company: Optional[str] = Field(None, min_length=1, max_length=200)
+    visitor_phone: str = Field(..., min_length=1, max_length=20)
+    visitor_email: Optional[str] = Field(None, min_length=1, max_length=255)
     visitor_type: VisitorTypeEnum
-    sponsor_employee_id: str
-    sponsor_name: str
-    sponsor_department: Optional[str] = None
-    purpose_of_visit: str
+    sponsor_employee_id: str = Field(..., min_length=1, max_length=50)
+    sponsor_name: str = Field(..., min_length=1, max_length=200)
+    sponsor_department: Optional[str] = Field(None, min_length=1, max_length=100)
+    purpose_of_visit: str = Field(..., min_length=1)
     visit_date: datetime
-    expected_duration: Optional[int] = None
-    areas_to_visit: Optional[str] = None
+    expected_duration: Optional[int] = Field(None, ge=1)
+    areas_to_visit: Optional[str] = Field(None, min_length=1)
     safety_required: bool = True
     medical_required: bool = True
 
 
 class VisitorRequestUpdate(BaseModel):
-    visitor_name: Optional[str] = None
-    visitor_company: Optional[str] = None
-    visitor_phone: Optional[str] = None
-    visitor_email: Optional[str] = None
-    purpose_of_visit: Optional[str] = None
+    visitor_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    visitor_company: Optional[str] = Field(None, min_length=1, max_length=200)
+    visitor_phone: Optional[str] = Field(None, min_length=1, max_length=20)
+    visitor_email: Optional[str] = Field(None, min_length=1, max_length=255)
+    purpose_of_visit: Optional[str] = Field(None, min_length=1)
     visit_date: Optional[datetime] = None
-    expected_duration: Optional[int] = None
-    areas_to_visit: Optional[str] = None
+    expected_duration: Optional[int] = Field(None, ge=1)
+    areas_to_visit: Optional[str] = Field(None, min_length=1)
     status: Optional[RequestStatusEnum] = None
-    rejection_reason: Optional[str] = None
+    rejection_reason: Optional[str] = Field(None, min_length=1)
 
 
 class VisitorRequestResponse(BaseModel):
@@ -107,16 +107,16 @@ class VisitorRequestResponse(BaseModel):
 
 # Safety Training Schemas
 class SafetyTrainingCreate(BaseModel):
-    request_id: str
-    video_url: Optional[str] = None
-    video_duration: Optional[int] = None
+    request_id: str = Field(..., min_length=1)
+    video_url: Optional[str] = Field(None, min_length=1, max_length=500)
+    video_duration: Optional[int] = Field(None, ge=1)
 
 
 class SafetyTrainingUpdate(BaseModel):
     video_watched: Optional[bool] = None
-    watch_duration: Optional[int] = None
+    watch_duration: Optional[int] = Field(None, ge=0)
     quiz_attempted: Optional[bool] = None
-    quiz_score: Optional[int] = None
+    quiz_score: Optional[int] = Field(None, ge=0)
     quiz_passed: Optional[bool] = None
     status: Optional[TrainingStatusEnum] = None
 
@@ -148,8 +148,8 @@ class SafetyTrainingResponse(BaseModel):
 
 # Training Certificate Schemas
 class TrainingCertificateCreate(BaseModel):
-    training_id: str
-    visitor_name: str
+    training_id: str = Field(..., min_length=1)
+    visitor_name: str = Field(..., min_length=1, max_length=200)
     valid_until: Optional[datetime] = None
 
 
@@ -170,16 +170,16 @@ class TrainingCertificateResponse(BaseModel):
 
 # Medical Clearance Schemas
 class MedicalClearanceCreate(BaseModel):
-    request_id: str
-    document_name: str
-    document_path: str
-    document_type: str
-    document_size: int
+    request_id: str = Field(..., min_length=1)
+    document_name: str = Field(..., min_length=1, max_length=200)
+    document_path: str = Field(..., min_length=1)
+    document_type: str = Field(..., min_length=1, max_length=50)
+    document_size: int = Field(..., ge=0)
 
 
 class MedicalClearanceUpdate(BaseModel):
     verified: Optional[bool] = None
-    verification_notes: Optional[str] = None
+    verification_notes: Optional[str] = Field(None, min_length=1)
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
 
@@ -207,24 +207,31 @@ class MedicalClearanceResponse(BaseModel):
 
 # Gate Pass Schemas
 class GatePassCreate(BaseModel):
-    request_id: str
-    visitor_name: str
-    visitor_company: Optional[str] = None
-    visitor_phone: str
+    request_id: str = Field(..., min_length=1)
+    visitor_name: str = Field(..., min_length=1, max_length=200)
+    visitor_company: Optional[str] = Field(None, min_length=1, max_length=200)
+    visitor_phone: str = Field(..., min_length=1, max_length=20)
     visitor_type: VisitorTypeEnum
     valid_from: datetime
     valid_until: datetime
-    authorized_areas: Optional[str] = None
-    special_instructions: Optional[str] = None
-    sponsor_name: str
-    sponsor_contact: Optional[str] = None
+    authorized_areas: Optional[str] = Field(None, min_length=1)
+    special_instructions: Optional[str] = Field(None, min_length=1)
+    sponsor_name: str = Field(..., min_length=1, max_length=200)
+    sponsor_contact: Optional[str] = Field(None, min_length=1, max_length=20)
+
+    @validator("valid_until")
+    def validate_valid_until(cls, value, values):
+        valid_from = values.get("valid_from")
+        if valid_from and value <= valid_from:
+            raise ValueError("valid_until must be after valid_from")
+        return value
 
 
 class GatePassUpdate(BaseModel):
     status: Optional[GatePassStatusEnum] = None
     valid_until: Optional[datetime] = None
-    authorized_areas: Optional[str] = None
-    special_instructions: Optional[str] = None
+    authorized_areas: Optional[str] = Field(None, min_length=1)
+    special_instructions: Optional[str] = Field(None, min_length=1)
 
 
 class GatePassResponse(BaseModel):
@@ -256,18 +263,18 @@ class GatePassResponse(BaseModel):
 
 # Entry/Exit Log Schemas
 class EntryExitCreate(BaseModel):
-    request_id: str
-    gate_pass_id: str
+    request_id: str = Field(..., min_length=1)
+    gate_pass_id: str = Field(..., min_length=1)
     log_type: EntryExitTypeEnum
-    gate_number: Optional[str] = None
-    guard_id: Optional[str] = None
-    guard_name: Optional[str] = None
+    gate_number: Optional[str] = Field(None, min_length=1, max_length=50)
+    guard_id: Optional[str] = Field(None, min_length=1)
+    guard_name: Optional[str] = Field(None, min_length=1, max_length=200)
     qr_scanned: bool = False
     manual_entry: bool = False
-    verification_notes: Optional[str] = None
-    vehicle_number: Optional[str] = None
-    vehicle_type: Optional[str] = None
-    photo_path: Optional[str] = None
+    verification_notes: Optional[str] = Field(None, min_length=1)
+    vehicle_number: Optional[str] = Field(None, min_length=1, max_length=50)
+    vehicle_type: Optional[str] = Field(None, min_length=1, max_length=50)
+    photo_path: Optional[str] = Field(None, min_length=1)
 
 
 class EntryExitResponse(BaseModel):

@@ -50,20 +50,27 @@ class SOSStatusEnum(str, Enum):
 
 # Duty Roster Schemas
 class DutyRosterCreate(BaseModel):
-    guard_id: str
-    guard_name: str
-    guard_phone: Optional[str] = None
-    guard_employee_id: Optional[str] = None
+    guard_id: str = Field(..., min_length=1)
+    guard_name: str = Field(..., min_length=1, max_length=200)
+    guard_phone: Optional[str] = Field(None, min_length=1, max_length=20)
+    guard_employee_id: Optional[str] = Field(None, min_length=1, max_length=50)
     duty_date: datetime
     shift_type: ShiftTypeEnum
     shift_start: datetime
     shift_end: datetime
-    assigned_gate: Optional[str] = None
-    assigned_sector: Optional[str] = None
-    patrol_route: Optional[str] = None
-    supervisor_id: Optional[str] = None
-    supervisor_name: Optional[str] = None
-    special_instructions: Optional[str] = None
+    assigned_gate: Optional[str] = Field(None, min_length=1, max_length=50)
+    assigned_sector: Optional[str] = Field(None, min_length=1, max_length=100)
+    patrol_route: Optional[str] = Field(None, min_length=1, max_length=200)
+    supervisor_id: Optional[str] = Field(None, min_length=1)
+    supervisor_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    special_instructions: Optional[str] = Field(None, min_length=1)
+
+    @validator("shift_end")
+    def validate_shift_end(cls, value, values):
+        shift_start = values.get("shift_start")
+        if shift_start and value <= shift_start:
+            raise ValueError("shift_end must be after shift_start")
+        return value
 
 
 class DutyRosterUpdate(BaseModel):
@@ -71,13 +78,13 @@ class DutyRosterUpdate(BaseModel):
     shift_type: Optional[ShiftTypeEnum] = None
     shift_start: Optional[datetime] = None
     shift_end: Optional[datetime] = None
-    assigned_gate: Optional[str] = None
-    assigned_sector: Optional[str] = None
-    patrol_route: Optional[str] = None
+    assigned_gate: Optional[str] = Field(None, min_length=1, max_length=50)
+    assigned_sector: Optional[str] = Field(None, min_length=1, max_length=100)
+    patrol_route: Optional[str] = Field(None, min_length=1, max_length=200)
     status: Optional[DutyStatusEnum] = None
     check_in_time: Optional[datetime] = None
     check_out_time: Optional[datetime] = None
-    remarks: Optional[str] = None
+    remarks: Optional[str] = Field(None, min_length=1)
 
 
 class DutyRosterResponse(BaseModel):
@@ -111,32 +118,32 @@ class DutyRosterResponse(BaseModel):
 
 # Checkpoint Schemas
 class CheckpointCreate(BaseModel):
-    checkpoint_name: str
-    location_description: Optional[str] = None
-    sector: Optional[str] = None
-    building: Optional[str] = None
-    floor: Optional[str] = None
-    gps_latitude: Optional[float] = None
-    gps_longitude: Optional[float] = None
-    rfid_tag_id: Optional[str] = None
+    checkpoint_name: str = Field(..., min_length=1, max_length=200)
+    location_description: Optional[str] = Field(None, min_length=1)
+    sector: Optional[str] = Field(None, min_length=1, max_length=100)
+    building: Optional[str] = Field(None, min_length=1, max_length=100)
+    floor: Optional[str] = Field(None, min_length=1, max_length=50)
+    gps_latitude: Optional[float] = Field(None, ge=-90, le=90)
+    gps_longitude: Optional[float] = Field(None, ge=-180, le=180)
+    rfid_tag_id: Optional[str] = Field(None, min_length=1, max_length=100)
     is_critical: bool = False
-    expected_scan_interval: Optional[int] = None
-    patrol_sequence: Optional[int] = None
+    expected_scan_interval: Optional[int] = Field(None, ge=1)
+    patrol_sequence: Optional[int] = Field(None, ge=1)
 
 
 class CheckpointUpdate(BaseModel):
-    checkpoint_name: Optional[str] = None
-    location_description: Optional[str] = None
-    sector: Optional[str] = None
-    building: Optional[str] = None
-    floor: Optional[str] = None
-    gps_latitude: Optional[float] = None
-    gps_longitude: Optional[float] = None
-    rfid_tag_id: Optional[str] = None
+    checkpoint_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    location_description: Optional[str] = Field(None, min_length=1)
+    sector: Optional[str] = Field(None, min_length=1, max_length=100)
+    building: Optional[str] = Field(None, min_length=1, max_length=100)
+    floor: Optional[str] = Field(None, min_length=1, max_length=50)
+    gps_latitude: Optional[float] = Field(None, ge=-90, le=90)
+    gps_longitude: Optional[float] = Field(None, ge=-180, le=180)
+    rfid_tag_id: Optional[str] = Field(None, min_length=1, max_length=100)
     is_active: Optional[bool] = None
     is_critical: Optional[bool] = None
-    expected_scan_interval: Optional[int] = None
-    patrol_sequence: Optional[int] = None
+    expected_scan_interval: Optional[int] = Field(None, ge=1)
+    patrol_sequence: Optional[int] = Field(None, ge=1)
 
 
 class CheckpointResponse(BaseModel):
@@ -164,17 +171,17 @@ class CheckpointResponse(BaseModel):
 
 # Patrol Log Schemas
 class PatrolLogCreate(BaseModel):
-    duty_roster_id: str
-    checkpoint_id: str
-    scan_method: str = "manual"
-    guard_id: str
-    guard_name: Optional[str] = None
-    gps_latitude: Optional[float] = None
-    gps_longitude: Optional[float] = None
-    observations: Optional[str] = None
+    duty_roster_id: str = Field(..., min_length=1)
+    checkpoint_id: str = Field(..., min_length=1)
+    scan_method: str = Field("manual", min_length=1, max_length=50)
+    guard_id: str = Field(..., min_length=1)
+    guard_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    gps_latitude: Optional[float] = Field(None, ge=-90, le=90)
+    gps_longitude: Optional[float] = Field(None, ge=-180, le=180)
+    observations: Optional[str] = Field(None, min_length=1)
     anomalies_found: bool = False
-    anomaly_description: Optional[str] = None
-    photo_path: Optional[str] = None
+    anomaly_description: Optional[str] = Field(None, min_length=1)
+    photo_path: Optional[str] = Field(None, min_length=1)
 
 
 class PatrolLogResponse(BaseModel):
@@ -204,35 +211,35 @@ class PatrolLogResponse(BaseModel):
 
 # Incident Schemas
 class IncidentCreate(BaseModel):
-    title: str
-    description: str
-    incident_type: str
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1)
+    incident_type: str = Field(..., min_length=1, max_length=100)
     severity: IncidentSeverityEnum = IncidentSeverityEnum.MEDIUM
-    location: str
-    sector: Optional[str] = None
-    building: Optional[str] = None
-    floor: Optional[str] = None
-    gps_latitude: Optional[float] = None
-    gps_longitude: Optional[float] = None
+    location: str = Field(..., min_length=1, max_length=200)
+    sector: Optional[str] = Field(None, min_length=1, max_length=100)
+    building: Optional[str] = Field(None, min_length=1, max_length=100)
+    floor: Optional[str] = Field(None, min_length=1, max_length=50)
+    gps_latitude: Optional[float] = Field(None, ge=-90, le=90)
+    gps_longitude: Optional[float] = Field(None, ge=-180, le=180)
     incident_time: datetime
-    reported_by_guard_id: str
-    reported_by_guard_name: Optional[str] = None
-    duty_roster_id: Optional[str] = None
-    witnesses: Optional[str] = None
+    reported_by_guard_id: str = Field(..., min_length=1)
+    reported_by_guard_name: Optional[str] = Field(None, min_length=1, max_length=200)
+    duty_roster_id: Optional[str] = Field(None, min_length=1)
+    witnesses: Optional[str] = Field(None, min_length=1)
 
 
 class IncidentUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1)
     severity: Optional[IncidentSeverityEnum] = None
     status: Optional[IncidentStatusEnum] = None
-    response_team: Optional[str] = None
-    resolution_notes: Optional[str] = None
-    actions_taken: Optional[str] = None
+    response_team: Optional[str] = Field(None, min_length=1, max_length=200)
+    resolution_notes: Optional[str] = Field(None, min_length=1)
+    actions_taken: Optional[str] = Field(None, min_length=1)
     police_informed: Optional[bool] = None
     fire_dept_informed: Optional[bool] = None
     medical_assistance: Optional[bool] = None
-    evidence_collected: Optional[str] = None
+    evidence_collected: Optional[str] = Field(None, min_length=1)
 
 
 class IncidentResponse(BaseModel):
@@ -276,25 +283,25 @@ class IncidentResponse(BaseModel):
 
 # SOS Alert Schemas
 class SOSAlertCreate(BaseModel):
-    guard_id: str
-    guard_name: str
-    guard_phone: Optional[str] = None
-    alert_type: str = "emergency"
-    location: Optional[str] = None
-    sector: Optional[str] = None
-    gps_latitude: Optional[float] = None
-    gps_longitude: Optional[float] = None
+    guard_id: str = Field(..., min_length=1)
+    guard_name: str = Field(..., min_length=1, max_length=200)
+    guard_phone: Optional[str] = Field(None, min_length=1, max_length=20)
+    alert_type: str = Field("emergency", min_length=1, max_length=50)
+    location: Optional[str] = Field(None, min_length=1, max_length=200)
+    sector: Optional[str] = Field(None, min_length=1, max_length=100)
+    gps_latitude: Optional[float] = Field(None, ge=-90, le=90)
+    gps_longitude: Optional[float] = Field(None, ge=-180, le=180)
 
 
 class SOSAlertUpdate(BaseModel):
     status: Optional[SOSStatusEnum] = None
-    response_team: Optional[str] = None
+    response_team: Optional[str] = Field(None, min_length=1, max_length=200)
     response_time: Optional[datetime] = None
     responders_arrived_at: Optional[datetime] = None
-    resolution_notes: Optional[str] = None
+    resolution_notes: Optional[str] = Field(None, min_length=1)
     false_alarm: Optional[bool] = None
-    false_alarm_reason: Optional[str] = None
-    incident_id: Optional[str] = None
+    false_alarm_reason: Optional[str] = Field(None, min_length=1)
+    incident_id: Optional[str] = Field(None, min_length=1)
 
 
 class SOSAlertResponse(BaseModel):

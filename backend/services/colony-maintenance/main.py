@@ -569,13 +569,15 @@ async def get_dashboard_stats(
     """Get dashboard statistics"""
     total_requests = db.query(MaintenanceRequest).count()
     pending_requests = db.query(MaintenanceRequest).filter(
-        MaintenanceRequest.status == RequestStatus.SUBMITTED
+        MaintenanceRequest.status.in_(
+            [RequestStatus.SUBMITTED, RequestStatus.ASSIGNED, RequestStatus.MATERIALS_REQUIRED]
+        )
     ).count()
     in_progress = db.query(MaintenanceRequest).filter(
         MaintenanceRequest.status == RequestStatus.IN_PROGRESS
     ).count()
     completed = db.query(MaintenanceRequest).filter(
-        MaintenanceRequest.status == RequestStatus.COMPLETED
+        MaintenanceRequest.status.in_([RequestStatus.COMPLETED, RequestStatus.CLOSED])
     ).count()
     
     overdue_requests = db.query(MaintenanceRequest).filter(

@@ -31,6 +31,12 @@ app = FastAPI(title="Equipment Management Service", version="1.0.0")
 setup_middleware(app)
 
 
+def _get_user_id(current_user) -> Optional[str]:
+    if isinstance(current_user, dict):
+        return current_user.get("id")
+    return getattr(current_user, "id", None)
+
+
 def _should_seed() -> bool:
     return os.getenv("SEED_DATA_ON_STARTUP", "true").strip().lower() in {"1", "true", "yes"}
 
@@ -152,7 +158,7 @@ async def list_equipment(
         query = query.filter(Equipment.status == status)
     if equipment_type:
         query = query.filter(Equipment.equipment_type == equipment_type)
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Equipment.created_at.desc()).offset(skip).limit(limit).all()
 
 @app.get("/equipment/{equipment_id}", response_model=EquipmentResponse)
 async def get_equipment(
@@ -281,7 +287,7 @@ async def create_booking(
     booking = EquipmentBooking(
         **booking_data.model_dump(),
         booking_number=booking_number,
-        requested_by_id=current_user.id
+        requested_by_id=_get_user_id(current_user)
     )
     db.add(booking)
     db.commit()
@@ -350,7 +356,7 @@ async def approve_booking(
         raise HTTPException(status_code=404, detail="Booking not found")
     
     booking.status = BookingStatus.APPROVED
-    booking.approved_by_id = current_user.id
+    booking.approved_by_id = _get_user_id(current_user)
     db.commit()
     
     return {"message": "Booking approved", "booking_id": booking_id}
@@ -454,7 +460,7 @@ async def create_safety_permit(
     permit = SafetyPermit(
         **permit_data.model_dump(),
         permit_number=permit_number,
-        issued_by_id=current_user.id
+        issued_by_id=_get_user_id(current_user)
     )
     db.add(permit)
     db.commit()
